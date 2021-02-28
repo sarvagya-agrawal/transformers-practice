@@ -6,6 +6,7 @@
 from argparse import ArgumentParser, _SubParsersAction
 
 from .utils.logging import LogLevel
+from .data.args import prep_smcalflow_args
 
 
 def train_args(sub_parser: _SubParsersAction) -> None:
@@ -26,3 +27,12 @@ def logging_args(parser: ArgumentParser) -> None:
                         choices=LogLevel.__members__.values(),
                         dest='log_level',
                         help="Log level.")
+
+
+def data_args(sub_parser: _SubParsersAction) -> None:
+    data_subp = sub_parser.add_subparsers(dest='data_command')
+    smcalflow_prep = data_subp.add_parser(
+        'prep-smcalflow',
+        help="run 'python -m tod data prep-smcalflow --help' for arguments",
+    )
+    prep_smcalflow_args(smcalflow_prep)
