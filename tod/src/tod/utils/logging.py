@@ -3,10 +3,26 @@
 @github: OpenNMT-py
 @link: https://github.com/OpenNMT/OpenNMT-py/blob/master/onmt/utils/logging.py
 """
-import logging
 from logging.handlers import RotatingFileHandler
+from enum import Enum
+
+import logging
 
 logger = logging.getLogger()
+
+
+class LogLevel(Enum):
+    '''
+    What the stdlib did not provide!
+    '''
+    DEBUG = logging.DEBUG
+    INFO = logging.INFO
+    WARNING = logging.WARNING
+    ERROR = logging.ERROR
+    CRITICAL = logging.CRITICAL
+
+    def __str__(self):
+        return self.name
 
 
 def init_logger(log_file: str = None,
