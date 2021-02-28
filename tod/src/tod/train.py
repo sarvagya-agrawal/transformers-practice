@@ -3,7 +3,7 @@
 @github: MathieuTuli
 @email: tuli.mathie@gmail.com
 """
+from argparser import Namespace
 
-
-def main():
+def main(args: Namespace):
     ...

@@ -27,7 +27,6 @@ if args.verbose:
     args.log_level = LogLevel.DEBUG
 logger = init_logger(Path(args.logs),
                      log_level=args.log_level)
-print(args.logs)
 if str(args.command) == 'train':
     train_main(args)
 else:
