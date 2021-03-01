@@ -6,16 +6,12 @@
 from configargparse import ArgumentParser
 
 from .utils.logging import LogLevel
-from .data.args import prep_smcalflow_args
+from .data.args import prep_smcalflow_args, build_vocab_args
 
 
 def train_args(parent_parser: ArgumentParser,
                sub_parser: ArgumentParser) -> None:
-    # sub_parser.add_argument(
-    #     '--config', dest='config',
-    #     default='config.yaml', type=str,
-    #     help="Set configuration file path: Default = 'config.yaml'")
-    ...
+    build_vocab_args(sub_parser, build_vocab_only=False)
 
 
 def logging_args(parser: ArgumentParser) -> None:
@@ -40,3 +36,9 @@ def data_args(parent_parser: ArgumentParser,
         parents=[parent_parser], add_help=False
     )
     prep_smcalflow_args(smcalflow_prep)
+    build_vocab = data_subp.add_parser(
+        'build-vocab',
+        help="run 'python -m tod data build-vocab  --help' for arguments",
+        parents=[parent_parser], add_help=False
+    )
+    build_vocab_args(build_vocab, build_vocab_only=True)

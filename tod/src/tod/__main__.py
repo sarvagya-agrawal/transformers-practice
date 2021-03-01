@@ -3,9 +3,10 @@
 @github: MathieuTuli
 @email: tuli.mathie@gmail.com
 """
-from configargparse import ArgumentParser
 from datetime import datetime
 from pathlib import Path
+
+from configargparse import ArgumentParser
 
 from .utils.logging import LogLevel, init_logger
 from .train import main as train_main

@@ -6,17 +6,19 @@ Semantic Machines\N{TRADE MARK SIGN} software.
 
 Creates text data (source-target pairs) to be used for training OpenNMT models.
 """
-import argparse
-import dataclasses
-import re
 from typing import Dict, Iterator, List, TextIO
-
 import jsons
+import re
+
 from pydantic.dataclasses import dataclass
+from configargparse import Namespace
 from tqdm import tqdm
 
-from dataflow.core.constants import SpecialStrings
-from dataflow.core.dialogue import Dialogue, Turn, TurnId
+import dataclasses
+
+from .constants import SpecialStrings
+from .dialogue import Dialogue, Turn, TurnId
+
 
 # We assume all dialogues start from turn 0.
 # This is true for MultiWoZ and CalFlow datasets.
@@ -214,7 +216,7 @@ def create_onmt_text_data_for_dialogue(
         yield onmt_text_datum
 
 
-def main(
+def prep_dialogue(
         dataflow_dialogues_jsonl: str,
         num_context_turns: int,
         min_turn_index: int,
@@ -229,14 +231,14 @@ def main(
         dialogue = jsons.loads(line.strip(), Dialogue)
 
         for onmt_text_datum in create_onmt_text_data_for_dialogue(
-            dialogue=dialogue,
-            num_context_turns=num_context_turns,
-            min_turn_index=min_turn_index,
-            include_program=include_program,
-            include_agent_utterance=include_agent_utterance,
-            include_described_entities=include_described_entities,
-        ):
-            for field_name, field_value in dataclasses.asdict(onmt_text_datum).items():
+                dialogue=dialogue,
+                num_context_turns=num_context_turns,
+                min_turn_index=min_turn_index,
+                include_program=include_program,
+                include_agent_utterance=include_agent_utterance,
+                include_described_entities=include_described_entities,):
+            for field_name, field_value in dataclasses.asdict(
+                    onmt_text_datum).items():
                 fp = fps[field_name]
                 fp.write(field_value)
                 fp.write("\n")
@@ -245,55 +247,9 @@ def main(
         fp.close()
 
 
-def args(argument_parser: argparse.ArgumentParser) -> None:
-    argument_parser.add_argument(
-        "--data",
-        help="the jsonl file containing the dialogue data with" +
-             "dataflow programs",
-    )
-    argument_parser.add_argument(
-        "--context",
-        type=int,
-        help="number of previous turns to be included in the source sequence",
-    )
-    argument_parser.add_argument(
-        "--include-program",
-        default=False,
-        action="store_true",
-        help="if True, include the gold program for the context turn parts",
-    )
-    argument_parser.add_argument(
-        "--include-agent-utterance",
-        default=False,
-        action="store_true",
-        help="if True, include the gold agent utterance for" +
-             "the context turn parts",
-    )
-    argument_parser.add_argument(
-        "--include-described-entities",
-        default=False,
-        action="store_true",
-        help="if True, include the described entities field for the" +
-             "context turn parts",
-    )
-    argument_parser.add_argument(
-        "--subsets",
-        nargs="+",
-        default=['train', 'valid'],
-        help="the output file basename for the extracted text data" +
-             "for OpenNMT",
-    )
-
-
-if __name__ == "__main__":
-    cmdline_parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawTextHelpFormatter
-    )
-    args(cmdline_parser)
-    args = cmdline_parser.parse_args()
-
+def main(args: Namespace):
     for subset in args.subset:
-        main(
+        prep_dialogue(
             dataflow_dialogues_jsonl=args.dialogues_jsonl,
             num_context_turns=args.num_context_turns,
             min_turn_index=_MIN_TURN_INDEX,

@@ -3,10 +3,23 @@
 @github: MathieuTuli
 @email: tuli.mathie@gmail.com
 """
-from argparse import _SubParsersAction
+from onmt.opts import _add_dynamic_corpus_opts, _add_dynamic_fields_opts,\
+    _add_dynamic_transform_opts, _add_reproducibility_opts
+from configargparse import ArgumentParser
 
 
-def prep_smcalflow_args(sub_parser: _SubParsersAction) -> None:
+def build_vocab_args(sub_parser: ArgumentParser,
+                     build_vocab_only: bool) -> None:
+    # dynamic_prepare_opts(sub_parser, build_vocab_only=True)
+    _add_dynamic_corpus_opts(sub_parser, build_vocab_only=build_vocab_only)
+    _add_dynamic_fields_opts(sub_parser, build_vocab_only=build_vocab_only)
+    _add_dynamic_transform_opts(sub_parser)
+
+    if build_vocab_only:
+        _add_reproducibility_opts(sub_parser)
+
+
+def prep_smcalflow_args(sub_parser: ArgumentParser) -> None:
     sub_parser.add_argument(
         "--data",
         help="the jsonl file containing the dialogue data with" +
