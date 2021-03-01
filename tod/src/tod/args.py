@@ -11,6 +11,10 @@ from .data.args import prep_smcalflow_args, build_vocab_args
 
 def train_args(parent_parser: ArgumentParser,
                sub_parser: ArgumentParser) -> None:
+    group = sub_parser.add_argument('Train')
+    group.add_argument(
+        '--model-type', default='onmt', choices=['onmt', 'custom'],
+        type=str, help="Define model type.")
     build_vocab_args(sub_parser, build_vocab_only=False)
 
 
