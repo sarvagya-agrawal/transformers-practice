@@ -8,8 +8,9 @@ from configargparse import ArgumentParser
 
 from onmt.opts import model_opts, _add_train_general_opts, \
     _add_train_dynamic_data
-from .utils.logging import LogLevel
 from .data.args import prep_smcalflow_args, build_vocab_args
+from .test.args import test_smcalflow_args
+from .utils.logging import LogLevel
 
 
 def train_args(parent_parser: ArgumentParser,
@@ -22,6 +23,17 @@ def train_args(parent_parser: ArgumentParser,
     model_opts(sub_parser)
     _add_train_general_opts(sub_parser)
     _add_train_dynamic_data(sub_parser)
+
+
+def test_args(parent_parser: ArgumentParser,
+              sub_parser: ArgumentParser) -> None:
+    test_subp = sub_parser.add_subparsers(dest='test_command')
+    smcalflow_test = test_subp.add_parser(
+        'smcalflow',
+        help="run 'python -m tod test smcalflow --help' for arguments",
+        parents=[parent_parser], add_help=False
+    )
+    test_smcalflow_args(smcalflow_test)
 
 
 def logging_args(parser: ArgumentParser) -> None:

@@ -10,7 +10,8 @@ from configargparse import ArgumentParser, YAMLConfigFileParser
 
 from .utils.logging import LogLevel, init_logger
 from .train import main as train_main
-from .args import train_args, logging_args, data_args
+from .test import main as test_main
+from .args import train_args, logging_args, data_args, test_args
 from .data import main as data_main
 
 parser = ArgumentParser(description="TOD")
@@ -28,6 +29,11 @@ train_sub_parser = sub_parser.add_parser(
     parents=[parent_parser], add_help=False)
 train_args(parent_parser, train_sub_parser)
 
+test_sub_parser = sub_parser.add_parser(
+    'test', help="run 'python -m tod test --help' for test arguments",
+    parents=[parent_parser], add_help=False)
+test_args(parent_parser, test_sub_parser)
+
 data_sub_parser = sub_parser.add_parser(
     'data', help="run 'python -m tod data --help' for data arguments",
     parents=[parent_parser], add_help=False,
@@ -41,6 +47,8 @@ logger = init_logger(Path(args.logs),
                      log_level=args.log_level)
 if str(args.command) == 'train':
     train_main(args)
+elif str(args.command) == 'test':
+    test_main(args)
 elif str(args.command) == 'data':
     data_main(args)
 else:
