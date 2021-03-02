@@ -1,7 +1,7 @@
 """
 @author: Mathieu Tuli
 @github: MathieuTuli
-@email: tuli.mathie@gmail.com
+@email: tuli.mathieu@gmail.com
 """
 from onmt.bin.build_vocab import build_vocab_main
 from configargparse import Namespace

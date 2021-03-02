@@ -1,7 +1,7 @@
 """
 @author: Mathieu Tuli
 @github: MathieuTuli
-@email: tuli.mathie@gmail.com
+@email: tuli.mathieu@gmail.com
 """
 from onmt.opts import _add_dynamic_corpus_opts, _add_dynamic_fields_opts,\
     _add_dynamic_transform_opts, _add_reproducibility_opts

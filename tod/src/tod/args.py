@@ -1,7 +1,7 @@
 """
 @author: Mathieu Tuli
 @github: MathieuTuli
-@email: tuli.mathie@gmail.com
+@email: tuli.mathieu@gmail.com
 """
 from configargparse import ArgumentParser
 
