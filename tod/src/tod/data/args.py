@@ -22,11 +22,18 @@ def build_vocab_args(sub_parser: ArgumentParser,
 def prep_smcalflow_args(sub_parser: ArgumentParser) -> None:
     sub_parser.add_argument(
         "--data",
+        required=True,
         help="the jsonl file containing the dialogue data with" +
              "dataflow programs",
     )
     sub_parser.add_argument(
+        "--output",
+        required=True,
+        help="the output folder containing the final processed data"
+    )
+    sub_parser.add_argument(
         "--context",
+        required=True,
         type=int,
         help="number of previous turns to be included in the source sequence",
     )

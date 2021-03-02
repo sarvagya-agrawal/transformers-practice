@@ -6,7 +6,7 @@
 from datetime import datetime
 from pathlib import Path
 
-from configargparse import ArgumentParser
+from configargparse import ArgumentParser, YAMLConfigFileParser
 
 from .utils.logging import LogLevel, init_logger
 from .train import main as train_main
@@ -14,7 +14,8 @@ from .args import train_args, logging_args, data_args
 from .data import main as data_main
 
 parser = ArgumentParser(description="TOD")
-parent_parser = ArgumentParser()
+parent_parser = ArgumentParser(
+    config_file_parser_class=YAMLConfigFileParser)
 parent_parser.add_argument('--config', '-c', is_config_file=True,
                            help='Config file path')
 parent_parser.add_argument(
@@ -29,7 +30,8 @@ train_args(parent_parser, train_sub_parser)
 
 data_sub_parser = sub_parser.add_parser(
     'data', help="run 'python -m tod data --help' for data arguments",
-    parents=[parent_parser], add_help=False)
+    parents=[parent_parser], add_help=False,
+    config_file_parser_class=YAMLConfigFileParser)
 data_args(parent_parser, data_sub_parser)
 
 args, unknown = parser.parse_known_args()

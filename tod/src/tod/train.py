@@ -9,7 +9,7 @@ from onmt.bin.train import train as onmt_train
 
 
 def main(args: Namespace):
-    if args.model_type == 'onmt':
+    if args.framework_choice == 'onmt':
         onmt_train(args)
-    if args.model_type == 'custom':
+    if args.framework_choice == 'custom':
         ...

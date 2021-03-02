@@ -7,6 +7,7 @@ Semantic Machines\N{TRADE MARK SIGN} software.
 Creates text data (source-target pairs) to be used for training OpenNMT models.
 """
 from typing import Dict, Iterator, List, TextIO
+from pathlib import Path
 import jsons
 import re
 
@@ -248,13 +249,15 @@ def prep_dialogue(
 
 
 def main(args: Namespace):
-    for subset in args.subset:
+    Path(args.output).mkdir(parents=True, exist_ok=True)
+    for subset in args.subsets:
         prep_dialogue(
-            dataflow_dialogues_jsonl=args.dialogues_jsonl,
-            num_context_turns=args.num_context_turns,
+            dataflow_dialogues_jsonl=Path(
+                args.data) / f"{subset}.dataflow_dialogues.jsonl",
+            num_context_turns=args.context,
             min_turn_index=_MIN_TURN_INDEX,
             include_program=args.include_program,
             include_agent_utterance=args.include_agent_utterance,
             include_described_entities=args.include_described_entities,
-            onmt_text_data_outbase=subset,
+            onmt_text_data_outbase=Path(args.output) / subset,
         )

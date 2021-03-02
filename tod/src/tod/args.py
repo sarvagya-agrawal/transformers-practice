@@ -5,17 +5,23 @@
 """
 from configargparse import ArgumentParser
 
+
+from onmt.opts import model_opts, _add_train_general_opts, \
+    _add_train_dynamic_data
 from .utils.logging import LogLevel
 from .data.args import prep_smcalflow_args, build_vocab_args
 
 
 def train_args(parent_parser: ArgumentParser,
                sub_parser: ArgumentParser) -> None:
-    group = sub_parser.add_argument('Train')
+    group = sub_parser.add_argument_group('Train')
     group.add_argument(
-        '--model-type', default='onmt', choices=['onmt', 'custom'],
-        type=str, help="Define model type.")
+        '--framework-choice', default='onmt', choices=['onmt', 'custom'],
+        type=str, help="Define framework choice.")
     build_vocab_args(sub_parser, build_vocab_only=False)
+    model_opts(sub_parser)
+    _add_train_general_opts(sub_parser)
+    _add_train_dynamic_data(sub_parser)
 
 
 def logging_args(parser: ArgumentParser) -> None:
