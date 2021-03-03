@@ -309,7 +309,7 @@ def main(args: Namespace) -> None:
     dialogues_jsonl = args.data
     datum_id_jsonl = args.datum_ids
     src_txt = args.src
-    ref_txt = args.ref
+    ref_txt = args.tgt
     nbest_txt = args.nbest_txt
     nbest = args.nbest
     outbase = args.output

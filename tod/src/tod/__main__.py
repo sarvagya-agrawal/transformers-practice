@@ -8,10 +8,12 @@ from pathlib import Path
 
 from configargparse import ArgumentParser, YAMLConfigFileParser
 
+from .args import train_args, logging_args, data_args, test_args,\
+    translate_args
 from .utils.logging import LogLevel, init_logger
+from .translate import main as translate_main
 from .train import main as train_main
 from .test import main as test_main
-from .args import train_args, logging_args, data_args, test_args
 from .data import main as data_main
 
 parser = ArgumentParser(description="TOD")
@@ -28,6 +30,11 @@ train_sub_parser = sub_parser.add_parser(
     'train', help="run 'python -m tod train --help' for train arguments",
     parents=[parent_parser], add_help=False)
 train_args(parent_parser, train_sub_parser)
+
+translate_sub_parser = sub_parser.add_parser(
+    'translate', parents=[parent_parser], add_help=False,
+    help="run 'python -m tod translate --help' for translate arguments",)
+translate_args(parent_parser, translate_sub_parser)
 
 test_sub_parser = sub_parser.add_parser(
     'test', help="run 'python -m tod test --help' for test arguments",
@@ -47,6 +54,8 @@ logger = init_logger(Path(args.logs),
                      log_level=args.log_level)
 if str(args.command) == 'train':
     train_main(args)
+elif str(args.command) == 'translate':
+    translate_main(args)
 elif str(args.command) == 'test':
     test_main(args)
 elif str(args.command) == 'data':

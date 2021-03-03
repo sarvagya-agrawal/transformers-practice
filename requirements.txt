@@ -33,11 +33,10 @@ sentencepiece==0.1.95
 six==1.15.0
 tensorboard==2.4.1
 tensorboard-plugin-wit==1.8.0
--e git+https://github.com/MathieuTuli/msc-tod-research.git@c42bb0d588effca33dd8e1bcc1745f76317ce0d5#egg=tod&subdirectory=tod
 torch==1.6.0
 torchaudio==0.7.2
 torchtext==0.5.0
-torchvision==0.8.2+cu110
+torchvision
 tqdm==4.58.0
 typing-extensions==3.7.4.3
 typish==1.9.1

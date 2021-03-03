@@ -7,7 +7,7 @@ from configargparse import ArgumentParser
 
 
 from onmt.opts import model_opts, _add_train_general_opts, \
-    _add_train_dynamic_data
+    _add_train_dynamic_data, translate_opts
 from .data.args import prep_smcalflow_args, build_vocab_args
 from .test.args import test_smcalflow_args
 from .utils.logging import LogLevel
@@ -25,6 +25,15 @@ def train_args(parent_parser: ArgumentParser,
     _add_train_dynamic_data(sub_parser)
 
 
+def translate_args(parent_parser: ArgumentParser,
+                   sub_parser: ArgumentParser) -> None:
+    group = sub_parser.add_argument_group('Translate')
+    group.add_argument(
+        '--framework-choice', default='onmt', choices=['onmt', 'custom'],
+        type=str, help="Define framework choice.")
+    translate_opts(sub_parser)
+
+
 def test_args(parent_parser: ArgumentParser,
               sub_parser: ArgumentParser) -> None:
     test_subp = sub_parser.add_subparsers(dest='test_command')
@@ -37,16 +46,17 @@ def test_args(parent_parser: ArgumentParser,
 
 
 def logging_args(parser: ArgumentParser) -> None:
-    parser.add_argument(
-        '-v', '--verbose', action='store_true',
-        dest='verbose',
-        help="Set verbose. In effect, set --log-level to INFO.")
-    parser.set_defaults(verbose=False)
-    parser.add_argument('--log-level', type=LogLevel.__getitem__,
-                        default=LogLevel.INFO,
-                        choices=LogLevel.__members__.values(),
-                        dest='log_level',
-                        help="Log level.")
+    group = parser.add_argument_group("Logs")
+    # group.add_argument(
+    #     '-v', '--verbose', action='store_true',
+    #     dest='verbose',
+    #     help="Set verbose. In effect, set --log-level to INFO.")
+    group.set_defaults(verbose=False)
+    group.add_argument('--log-level', type=LogLevel.__getitem__,
+                       default=LogLevel.INFO,
+                       choices=LogLevel.__members__.values(),
+                       dest='log_level',
+                       help="Log level.")
 
 
 def data_args(parent_parser: ArgumentParser,
