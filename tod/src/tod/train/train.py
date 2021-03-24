@@ -22,7 +22,7 @@ class TrainingAgent:
             self.model = torch.nn.DataParallel(self.model)
 
     def train(self) -> None:
-        ...t
+        ...
 
 
 def main(args: Namespace) -> None:
