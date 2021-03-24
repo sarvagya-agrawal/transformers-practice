@@ -30,7 +30,7 @@ wheels/
 
 # Tools: MyPy, flake8, coverage, etc.
 /.*_cache
-/.coverage
+**/.coverage
 
 # IDE files never belong in a repo. Not unless the repo is tied to an IDE
 # (generally a bad idea). It's also diff noise.
