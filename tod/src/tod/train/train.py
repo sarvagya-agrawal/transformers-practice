@@ -52,8 +52,8 @@ class TrainingAgent:
                                     num_workers=self.args.train.num_workers)
         self.model = get_model(self.args.model)
         self.optimizer, self.scheduler = get_optimizer_scheduler(
-            optimizer=self.args.optimizer,
-            scheduler=self.args.scheduler,
+            optim_method=self.args.optimizer,
+            scheduler_method=self.args.scheduler,
             optimizer_kwargs=self.args.optimizer_kwargs,
             scheduler_kwargs=self.args.scheduler_kwargs,)
         self.loss = self.get_loss(self.args.train.loss)
