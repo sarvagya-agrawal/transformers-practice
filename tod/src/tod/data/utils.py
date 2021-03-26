@@ -6,31 +6,24 @@
 from typing import List, Union, Dict, Tuple
 from pathlib import PosixPath
 
-from transformers import BertTokenizer, OpenAIGPTTokenizer
 from torch.utils.data import TensorDataset, DataLoader, \
     RandomSampler, SequentialSampler
+from transformers import Tokenizer
 
 import torch
 
-from .tokenizers import Tokenizer
-
 
 def tokenize(lines: List[str],
-             tokenizer_name: str,
-             max_length: int,
-             lower_case: bool = True) -> Tuple[List[int], None]:
+             tokenizer: Tokenizer,
+             max_length: int,) -> Tuple[List[int], None]:
     toks = ['bert-base-uncased']
-    if tokenizer_name == 'bert-base-uncased':
-        tokenizer = BertTokenizer.from_pretrained(
-            tokenizer_name, do_lower_case=lower_case)
+    if str(tokenizer) == 'BertTokenizer':
         tokenized_inputs = tokenizer(
             lines,
             padding='max_length',
             max_length=max_length,
             return_tensors='pt')
-    elif tokenizer_name == 'openai-gpt':
-        tokenizer = OpenAIGPTTokenizer.from_pretrained(
-            tokenizer_name, do_lower_case=lower_case)
+    elif str(tokenizer) == 'OpenAIGPTTokenizer':
         tokenizer.add_special_tokens({'pad_token': '<PAD>'})
         tokenized_inputs = tokenizer(
             lines,
@@ -45,15 +38,14 @@ def tokenize(lines: List[str],
 
 def load_data(src_fname: PosixPath,
               tgt_fname: PosixPath,
-              tokenizer_name: str,
+              tokenizer: Tokenizer,
               max_length: int,
               batch_size: int,
-              num_workers: int = 4,
-              lower_case: bool = True) -> None:
+              num_workers: int = 4,) -> None:
     src_data = read_lines(src_fname)
     tgt_data = read_lines(src_fname)
-    src_ids, src_attention_mask = tokenize(src_data, tokenizer_name,
-                                           max_length, lower_case)
+    src_ids, src_attention_mask = tokenize(src_data, tokenizer,
+                                           max_length)
     tgt_tensors = torch.tensor(tgt_data)
     data = TensorDataset(src_ids, src_attention_mask, tgt_tensors)
     data_sampler = RandomSampler(data)
