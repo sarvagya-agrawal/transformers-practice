@@ -9,9 +9,9 @@ from pathlib import Path
 from configargparse import ArgumentParser, YAMLConfigFileParser
 
 from .args import train_args, logging_args, data_args, test_args,\
-    translate_args
+    decode_args, split_args
 from .utils.logging import LogLevel, init_logger
-from .translate import main as translate_main
+from .decode import main as decode_main
 from .train import main as train_main
 from .test import main as test_main
 from .data import main as data_main
@@ -31,10 +31,10 @@ train_sub_parser = sub_parser.add_parser(
     parents=[parent_parser], add_help=False)
 train_args(parent_parser, train_sub_parser)
 
-translate_sub_parser = sub_parser.add_parser(
-    'translate', parents=[parent_parser], add_help=False,
-    help="run 'python -m tod translate --help' for translate arguments",)
-translate_args(parent_parser, translate_sub_parser)
+decode_sub_parser = sub_parser.add_parser(
+    'decode', parents=[parent_parser], add_help=False,
+    help="run 'python -m tod decode --help' for decode arguments",)
+decode_args(parent_parser, decode_sub_parser)
 
 test_sub_parser = sub_parser.add_parser(
     'test', help="run 'python -m tod test --help' for test arguments",
@@ -47,15 +47,17 @@ data_sub_parser = sub_parser.add_parser(
     config_file_parser_class=YAMLConfigFileParser)
 data_args(parent_parser, data_sub_parser)
 
-args, unknown = parser.parse_known_args()
-if args.verbose:
-    args.log_level = LogLevel.DEBUG
+# args, unknown = parser.parse_known_args()
+args = parser.parse_args()
 logger = init_logger(Path(args.logs),
                      log_level=args.log_level)
 if str(args.command) == 'train':
+    args = split_args(train_sub_parser._action_groups,
+                      ['train', 'data', 'io'],
+                      args)
     train_main(args)
-elif str(args.command) == 'translate':
-    translate_main(args)
+elif str(args.command) == 'decode':
+    decode_main(args)
 elif str(args.command) == 'test':
     test_main(args)
 elif str(args.command) == 'data':

@@ -9,6 +9,9 @@ from configargparse import Namespace
 from ..utils.logging import logger
 from .smcalflow.prep import main as prep_smcalflow_main
 
+DATASETS = ['smcalflow', 'multiwoz2.1']
+TASKS = ['causal', 'nmt']
+
 
 def main(args: Namespace):
     if args.data_command == 'prep-smcalflow':

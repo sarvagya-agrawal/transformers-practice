@@ -5,8 +5,9 @@
 """
 from pathlib import Path
 
-from transformers import Tokenizer, BertTokenizer, OpenAIGPTTokenizer
-from transformers import GPT2Config, GPT2SmallConfig, GPT2LMHeadModel
+from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+from transformers import BertTokenizer, OpenAIGPTTokenizer
+from transformers import GPT2Config, GPT2LMHeadModel
 from configargparse import Namespace
 
 import torch
@@ -15,10 +16,9 @@ TOKENIZERS = ['bert-base-uncased', 'openai-gpt']
 MODELS = ['gpt2', 'gpt2-small']
 
 
-def get_tokenizer(args: Namespace,
+def get_tokenizer(tokenizer_name: str,
                   cache_dir: Path,
-                  tokenizer_name: str,
-                  lower_case: bool = True) -> Tokenizer:
+                  lower_case: bool = True) -> PreTrainedTokenizerBase:
     if tokenizer_name == 'bert-base-uncased':
         tokenizer = BertTokenizer.from_pretrained(
             tokenizer_name, do_lower_case=lower_case, cache_dir=cache_dir)
@@ -38,7 +38,7 @@ def get_model(model_name: str,
         _config = GPT2Config
     if model_name == 'gpt2-small':
         _model = GPT2LMHeadModel
-        _config = GPT2SmallConfig
+        _config = None
     if weights is not None:
         model = _model.from_pretrained(
             weights,

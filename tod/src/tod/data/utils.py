@@ -6,15 +6,15 @@
 from typing import List, Union, Dict, Tuple
 from pathlib import PosixPath
 
+from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from torch.utils.data import TensorDataset, DataLoader, \
     RandomSampler, SequentialSampler
-from transformers import Tokenizer
 
 import torch
 
 
 def tokenize(lines: List[str],
-             tokenizer: Tokenizer,
+             tokenizer: PreTrainedTokenizerBase,
              max_length: int,) -> Tuple[List[int], None]:
     toks = ['bert-base-uncased']
     if str(tokenizer) == 'BertTokenizer':
@@ -38,7 +38,7 @@ def tokenize(lines: List[str],
 
 def load_data(src_fname: PosixPath,
               tgt_fname: PosixPath,
-              tokenizer: Tokenizer,
+              tokenizer: PreTrainedTokenizerBase,
               max_length: int,
               batch_size: int,
               num_workers: int = 4,) -> None:

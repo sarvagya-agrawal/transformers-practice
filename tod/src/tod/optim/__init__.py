@@ -8,6 +8,9 @@ from typing import Dict, Any
 
 from torch.optim import SGD, AdamW, Adam
 
+OPTIMIZERS = ['SGD', 'AdamW', 'Adam']
+SCHEDULERS = ['StepLRWarmup', 'StepLR', 'None', None]
+
 
 def get_optimizer_scheduler(
         optim_method: str,

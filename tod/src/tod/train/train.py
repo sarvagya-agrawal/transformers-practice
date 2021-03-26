@@ -13,10 +13,10 @@ from configargparse import Namespace
 
 import torch
 
-from .models import get_tokenizer, get_model
-from .optim import get_optimizer_scheduler
-from .data.utils import load_data
-from .io import create_dir
+from ..models import get_tokenizer, get_model
+from ..optim import get_optimizer_scheduler
+from ..data.utils import load_data
+from ..io import create_dir
 
 
 class TrainingAgent:
@@ -36,7 +36,8 @@ class TrainingAgent:
         self.reset()
 
     def reset(self) -> None:
-        self.tokenizer = get_tokenizer(self.tokenizer)
+        self.tokenizer = get_tokenizer(self.args.train.tokenizer,
+                                       self.args.io.cache_dir)
         self.train_loader = load_data(src_fname=self.args.data.train_src,
                                       tgt_fname=self.args.data.train_tgt,
                                       tokenizer=self.tokenizer,
@@ -76,7 +77,7 @@ class TrainingAgent:
                     {'eos_token': '<|endoftext|>'})
 
     def train(self) -> None:
-        for trial in range(self.args['num_trials']):
+        for trial in range(self.args.train.num_trials):
             self.reset()
             self.run_epochs(trial, range(0, self.config['max_epochs']))
 
