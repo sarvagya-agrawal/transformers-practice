@@ -3,7 +3,7 @@
 @github: MathieuTuli
 @email: tuli.mathieu@gmail.com
 """
-from configargparse import ArgumentParser
+from argparse import ArgumentParser
 
 
 def test_smcalflow_args(sub_parser: ArgumentParser) -> None:

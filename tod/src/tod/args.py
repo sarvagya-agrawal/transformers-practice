@@ -21,7 +21,6 @@ def split_args(groups: _ArgumentGroup,
                group_titles: List[str],
                args: Namespace) -> Namespace:
     split_args = Namespace()
-    print(args)
     for group in groups:
         if group.title in group_titles:
             sub_ns = Namespace()
@@ -33,7 +32,6 @@ def split_args(groups: _ArgumentGroup,
                 args, a.dest, None) for a in group._group_actions}
             for k, v in other_args.items():
                 split_args.__dict__[k] = v
-    print(split_args)
     return split_args
 
 

@@ -5,7 +5,7 @@
 """
 from onmt.opts import _add_dynamic_corpus_opts, _add_dynamic_fields_opts,\
     _add_dynamic_transform_opts, _add_reproducibility_opts
-from configargparse import ArgumentParser
+from argparse import ArgumentParser
 
 
 def build_vocab_args(sub_parser: ArgumentParser,

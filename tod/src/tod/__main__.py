@@ -6,21 +6,27 @@
 from datetime import datetime
 from pathlib import Path
 
-from configargparse import ArgumentParser, YAMLConfigFileParser
+
+# from configargparse import ArgumentParser, YAMLConfigFileParser
+from argparse import ArgumentParser
 
 from .args import train_args, logging_args, data_args, test_args,\
     decode_args, split_args
-from .utils.logging import LogLevel, init_logger
 from .decode import main as decode_main
+from .utils.logging import init_logger
+from .utils import config_file_parser
 from .train import main as train_main
 from .test import main as test_main
 from .data import main as data_main
 
-parser = ArgumentParser(description="TOD")
-parent_parser = ArgumentParser(
-    config_file_parser_class=YAMLConfigFileParser)
-parent_parser.add_argument('--config', '-c', is_config_file=True,
-                           help='Config file path')
+parser = ArgumentParser(description="TOD Base Parser")
+# parent_parser = ArgumentParser(
+#     config_file_parser_class=YAMLConfigFileParser)
+parent_parser = ArgumentParser(description='TOD Parent Parser')
+# parent_parser.add_argument('--config', '-c', is_config_file=True,
+#                            help='Config file path', type=yaml.safe_load)
+parent_parser.add_argument('--config', '-c',
+                           help='Config file path', default=None)
 parent_parser.add_argument(
     '--logs', help="Set output for log outputs",
     default=f"logs/tod_{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}.log",)
@@ -43,12 +49,14 @@ test_args(parent_parser, test_sub_parser)
 
 data_sub_parser = sub_parser.add_parser(
     'data', help="run 'python -m tod data --help' for data arguments",
-    parents=[parent_parser], add_help=False,
-    config_file_parser_class=YAMLConfigFileParser)
+    parents=[parent_parser], add_help=False)
+# config_file_parser_class=YAMLConfigFileParser)
 data_args(parent_parser, data_sub_parser)
 
 # args, unknown = parser.parse_known_args()
 args = parser.parse_args()
+if args.config is not None:
+    args = config_file_parser(args)
 logger = init_logger(Path(args.logs),
                      log_level=args.log_level)
 if str(args.command) == 'train':
