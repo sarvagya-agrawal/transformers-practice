@@ -3,12 +3,11 @@
 @github: MathieuTuli
 @email: tuli.mathieu@gmail.com
 """
-from typing import Union, Dict, Any, List
+from typing import Dict, Any, List
 from pathlib import Path
 
 import time
 
-from transformers import PreTrainedModel as HFPretrained
 from configargparse import Namespace
 
 import torch
@@ -150,7 +149,7 @@ class TrainingAgent:
                 targets = targets.cuda(self.gpu, non_blocking=True)
             with torch.no_grad():
                 outputs = self.model(
-                    inputs, attention_mask=input_mask, targets=targets)
+                    inputs, attention_mask=input_mask, labels=targets)
             loss = outputs[0]
             # if len(self.gpu) > 1:
             #     loss = loss.mean()
