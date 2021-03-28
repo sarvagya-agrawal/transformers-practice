@@ -106,7 +106,7 @@ class TrainingAgent:
             start_time = time.time()
             train_loss = self.epoch_iteration(trial, epoch)
             epoch_time = time.time()
-            val_loss = self.evaluate(epoch)
+            val_loss = self.validate(epoch)
             end_time = time.time()
             logger.info(f"E time: {epoch_time - start_time} | "
                         f"T time {end_time - epoch_time} | " +
