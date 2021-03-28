@@ -1,0 +1,30 @@
+# Train parameters
+model: gpt2
+pretrained: True
+tokenizer: openai-gpt
+gpu: 0
+optimizer: Adam
+scheduler: None
+batch-size: 1
+max-length: 1024
+max-epochs: 250
+num-workers: 4
+num-trials: 1
+loss: cross_entropy
+clip-grad: 1.0
+optimizer-kwargs:
+  lr: 0.1
+# scheduler-kwargs:  {}
+
+# Data Parameters
+name: multiwoz2.1
+train-src: /home/mat/github/U-of-T/grad-school/nlp/tod/simpletod/resources/gpt2/train.history_belief
+train-tgt: /home/mat/github/U-of-T/grad-school/nlp/tod/simpletod/resources/gpt2/train.history_belief
+val-src: /home/mat/github/U-of-T/grad-school/nlp/tod/simpletod/resources/gpt2/val.history_belief
+val-tgt: /home/mat/github/U-of-T/grad-school/nlp/tod/simpletod/resources/gpt2/val.history_belief
+task: causal
+
+# io
+output: test-output
+checkpoint: test-checkpoint
+cache-dir: test-cache
