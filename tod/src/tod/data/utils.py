@@ -3,7 +3,7 @@
 @github: MathieuTuli
 @email: tuli.mathieu@gmail.com
 """
-from typing import List, Union, Dict, Tuple
+from typing import List, Union, Dict
 from pathlib import PosixPath
 
 import torch
@@ -12,8 +12,8 @@ from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 # from transformers import LineByLineTextDataset
 from torch.utils.data import Dataset, DataLoader, \
     RandomSampler, SequentialSampler
-from torch.nn.utils.rnn import pad_sequence
-from datasets import load_dataset
+# from torch.nn.utils.rnn import pad_sequence
+# from datasets import load_dataset
 
 
 class LineByLineTextDataset(Dataset):
