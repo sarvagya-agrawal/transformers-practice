@@ -26,6 +26,7 @@ def train_args(sub_parser: ArgumentParser) -> None:
     train_group.add_argument("--num-workers", type=int, default=4)
     train_group.add_argument("--num-trials", type=int, default=3)
     train_group.add_argument("--loss", type=str)
+    train_group.add_argument("--mask", type=bool, default=False)
     train_group.add_argument("--clip-grad", default=1.0, type=float)
     train_group.add_argument("--optimizer-kwargs")
     train_group.add_argument("--scheduler-kwargs")

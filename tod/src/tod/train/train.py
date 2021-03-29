@@ -29,11 +29,11 @@ class TrainingAgent:
     loss = None
     output_filename: Path = None
     checkpoint = None
-    device = 'cuda'
 
     def __init__(self, args: Namespace,) -> None:
         self.args = args
         self.gpu = self.args.train.gpu
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.output_dir = create_dir(self.args.io.output)
         self.checkpoint_dir = create_dir(self.args.io.checkpoint)
         self.setup()
@@ -127,17 +127,17 @@ class TrainingAgent:
         for step, batch in enumerate(self.train_loader):
             if self.gpu is not None and self.device == 'cuda':
                 if len(batch) == 2:
-                    inputs = batch['input_ids'].cuda(
+                    inputs = torch.LongTensor(batch['input_ids']).cuda(
                         self.gpu, non_blocking=True)
-                    input_mask = batch['attention_mask'].cuda(
+                    input_mask = torch.LongTensor(batch['attention_mask']).cuda(
                         self.gpu, non_blocking=True)
                     targets = inputs
                 else:
-                    inputs = batch['input_ids'].cuda(
+                    inputs = torch.LongTensor(batch['input_ids']).cuda(
                         self.gpu, non_blocking=True)
-                    input_mask = batch['attention_mask'].cuda(
+                    input_mask = torch.LongTensor(batch['attention_mask']).cuda(
                         self.gpu, non_blocking=True)
-                    targets = batch['label_ids'].cuda(
+                    targets = torch.LongTensor(batch['label_ids']).cuda(
                         self.gpu, non_blocking=True)
             self.optimizer.zero_grad()
             outputs = self.model(
