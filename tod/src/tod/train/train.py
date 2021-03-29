@@ -127,18 +127,24 @@ class TrainingAgent:
         for step, batch in enumerate(self.train_loader):
             if self.gpu is not None and self.device == 'cuda':
                 if len(batch) == 2:
-                    inputs = torch.LongTensor(batch['input_ids']).cuda(
-                        self.gpu, non_blocking=True)
-                    input_mask = torch.LongTensor(batch['attention_mask']).cuda(
-                        self.gpu, non_blocking=True)
+                    # inputs = torch.LongTensor(batch['input_ids']).cuda(
+                    #     self.gpu, non_blocking=True)
+                    # input_mask = torch.LongTensor(batch['attention_mask']).cuda(
+                    #     self.gpu, non_blocking=True)
+                    # targets = inputs
+                    inputs = batch[0].cuda(self.gpu, non_blocking=True)
+                    input_mask = batch[1].cuda(self.gpu, non_blocking=True)
                     targets = inputs
                 else:
-                    inputs = torch.LongTensor(batch['input_ids']).cuda(
-                        self.gpu, non_blocking=True)
-                    input_mask = torch.LongTensor(batch['attention_mask']).cuda(
-                        self.gpu, non_blocking=True)
-                    targets = torch.LongTensor(batch['label_ids']).cuda(
-                        self.gpu, non_blocking=True)
+                    # inputs = torch.LongTensor(batch['input_ids']).cuda(
+                    #     self.gpu, non_blocking=True)
+                    # input_mask = torch.LongTensor(batch['attention_mask']).cuda(
+                    #     self.gpu, non_blocking=True)
+                    # targets = torch.LongTensor(batch['label_ids']).cuda(
+                    #     self.gpu, non_blocking=True)
+                    inputs = batch[0].cuda(self.gpu, non_blocking=True)
+                    input_mask = batch[1].cuda(self.gpu, non_blocking=True)
+                    targets = batch[2].cuda(self.gpu, non_blocking=True)
             self.optimizer.zero_grad()
             outputs = self.model(
                 inputs,
@@ -153,8 +159,8 @@ class TrainingAgent:
             train_loss += loss.item()
             loss.backward()
             if self.args.train.clip_grad > 0:
-                torch.nn.utils.clip_grad_norm(self.model.parameters(),
-                                              self.args.train.clip_grad)
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(),
+                                               self.args.train.clip_grad)
             self.optimizer.step()
             if self.scheduler is not None:
                 self.scheduler.step()
@@ -163,11 +169,27 @@ class TrainingAgent:
     def validate(self, epoch: int) -> float:
         self.model.eval()
         val_loss = 0
-        for step, (inputs, mask, targets) in enumerate(self.val_loader):
+        for step, batch in enumerate(self.val_loader):
             if self.gpu is not None and self.device == 'cuda':
-                inputs = inputs.cuda(self.gpu, non_blocking=True)
-                input_mask = mask.cuda(self.gpu, non_blocking=True)
-                targets = targets.cuda(self.gpu, non_blocking=True)
+                if len(batch) == 2:
+                    # inputs = torch.LongTensor(batch['input_ids']).cuda(
+                    #     self.gpu, non_blocking=True)
+                    # input_mask = torch.LongTensor(batch['attention_mask']).cuda(
+                    #     self.gpu, non_blocking=True)
+                    # targets = inputs
+                    inputs = batch[0].cuda(self.gpu, non_blocking=True)
+                    input_mask = batch[1].cuda(self.gpu, non_blocking=True)
+                    targets = inputs
+                else:
+                    # inputs = torch.LongTensor(batch['input_ids']).cuda(
+                    #     self.gpu, non_blocking=True)
+                    # input_mask = torch.LongTensor(batch['attention_mask']).cuda(
+                    #     self.gpu, non_blocking=True)
+                    # targets = torch.LongTensor(batch['label_ids']).cuda(
+                    #     self.gpu, non_blocking=True)
+                    inputs = batch[0].cuda(self.gpu, non_blocking=True)
+                    input_mask = batch[1].cuda(self.gpu, non_blocking=True)
+                    targets = batch[2].cuda(self.gpu, non_blocking=True)
             with torch.no_grad():
                 outputs = self.model(
                     inputs, attention_mask=input_mask, labels=targets)
