@@ -10,6 +10,8 @@ from pathlib import Path
 # from configargparse import ArgumentParser, YAMLConfigFileParser
 from argparse import ArgumentParser
 
+import torch
+
 from .args import train_args, logging_args, data_args, test_args,\
     decode_args, split_args
 from .decode import main as decode_main
@@ -18,6 +20,8 @@ from .utils import config_file_parser
 from .train import main as train_main
 from .test import main as test_main
 from .data import main as data_main
+
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 parser = ArgumentParser(description="TOD Base Parser")
 # parent_parser = ArgumentParser(

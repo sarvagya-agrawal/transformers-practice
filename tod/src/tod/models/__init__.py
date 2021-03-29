@@ -5,10 +5,10 @@
 """
 from pathlib import Path
 
+from transformers import BertTokenizer, OpenAIGPTTokenizer, GPT2Tokenizer
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
-from transformers import BertTokenizer, OpenAIGPTTokenizer
 from transformers import GPT2Config, GPT2LMHeadModel
-from configargparse import Namespace
+# from configargparse import Namespace
 
 import torch
 
@@ -21,18 +21,20 @@ def get_tokenizer(tokenizer_name: str,
                   lower_case: bool = True) -> PreTrainedTokenizerBase:
     if tokenizer_name == 'bert-base-uncased':
         tokenizer = BertTokenizer.from_pretrained(
-            tokenizer_name, do_lower_case=lower_case, cache_dir=cache_dir,
-            args={'reprocess_input_data': True})
+            tokenizer_name, cache_dir=cache_dir)
     elif tokenizer_name == 'openai-gpt':
         tokenizer = OpenAIGPTTokenizer.from_pretrained(
-            tokenizer_name, do_lower_case=lower_case, cache_dir=cache_dir,
-            args={'reprocess_input_data': True})
+            tokenizer_name, cache_dir=cache_dir)
+    elif tokenizer_name == 'gpt2':
+        tokenizer = GPT2Tokenizer.from_pretrained(
+            tokenizer_name, cache_dir=cache_dir)
     else:
         raise ValueError(f'Unknown tokenizer. Must be one of {TOKENIZERS}')
     return tokenizer
 
 
 def get_model(model_name: str,
+              cache_dir: Path,
               pretrained: bool = True) -> torch.nn.Module:
     if model_name == 'gpt2':
         _model = GPT2LMHeadModel
@@ -43,6 +45,7 @@ def get_model(model_name: str,
     if pretrained:
         model = _model.from_pretrained(
             model_name,
+            cache_dir=cache_dir,
             config=_config.from_pretrained(model_name))
     else:
         model = _model(

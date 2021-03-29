@@ -33,10 +33,11 @@ def train_args(sub_parser: ArgumentParser) -> None:
     data_group = sub_parser.add_argument_group('data')
     data_group.add_argument("--name", type=str, choices=DATASETS)
     data_group.add_argument("--train-src", type=str)
-    data_group.add_argument("--train-tgt", type=str)
+    data_group.add_argument("--train-tgt", type=str, default=None)
     data_group.add_argument("--val-src", type=str)
-    data_group.add_argument("--val-tgt", type=str)
+    data_group.add_argument("--val-tgt", type=str, default=None)
     data_group.add_argument("--task", type=str, choices=TASKS)
+    data_group.add_argument("--overwrite-cache", type=str)
 
     io_group = sub_parser.add_argument_group('io')
     io_group.add_argument("--output", type=str)

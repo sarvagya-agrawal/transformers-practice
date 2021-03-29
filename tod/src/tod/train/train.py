@@ -16,7 +16,7 @@ from ..models import get_tokenizer, get_model
 from ..optim import get_optimizer_scheduler
 from ..utils.logging import logger
 from ..data.utils import load_data
-from ..io import create_dir
+from ..utils.io import create_dir
 
 
 class TrainingAgent:
@@ -45,25 +45,34 @@ class TrainingAgent:
                                        self.args.io.cache_dir)
         self.task_setup()
         logger.info("Loading train dataset...")
-        self.train_loader = load_data(src_fname=self.args.data.train_src,
-                                      tgt_fname=self.args.data.train_tgt,
-                                      tokenizer=self.tokenizer,
-                                      max_length=self.args.train.max_length,
-                                      batch_size=self.args.train.batch_size,
-                                      num_workers=self.args.train.num_workers,
-                                      split='train')
+        self.train_loader = load_data(
+            src_fname=Path(self.args.data.train_src),
+            tgt_fname=Path(self.args.data.train_tgt) if self.args.data.val_tgt
+            is not None else None,
+            tokenizer=self.tokenizer,
+            cache_dir=self.args.io.cache_dir,
+            max_length=self.args.train.max_length,
+            batch_size=self.args.train.batch_size,
+            num_workers=self.args.train.num_workers,
+            overwrite_cache=self.args.data.overwrite_cache,
+            split='train')
         logger.info("Loading validation dataset...")
-        self.val_loader = load_data(src_fname=self.args.data.val_src,
-                                    tgt_fname=self.args.data.val_tgt,
-                                    tokenizer=self.tokenizer,
-                                    max_length=self.args.train.max_length,
-                                    batch_size=self.args.train.batch_size,
-                                    num_workers=self.args.train.num_workers,
-                                    split='val')
+        self.val_loader = load_data(
+            src_fname=Path(self.args.data.val_src),
+            tgt_fname=Path(self.args.data.val_tgt) if self.args.data.val_tgt
+            is not None else None,
+            tokenizer=self.tokenizer,
+            cache_dir=self.args.io.cache_dir,
+            max_length=self.args.train.max_length,
+            batch_size=self.args.train.batch_size,
+            num_workers=self.args.train.num_workers,
+            overwrite_cache=self.args.data.overwrite_cache,
+            split='val')
 
     def reset(self) -> None:
         logger.info("Loading model...")
         self.model = get_model(self.args.train.model,
+                               cache_dir=self.args.io.cache_dir,
                                pretrained=self.args.train.pretrained)
         self.model.to(self.device)
         logger.info(f"Setting model to {self.device}")
@@ -115,14 +124,26 @@ class TrainingAgent:
     def epoch_iteration(self, trial: int, epoch: int) -> float:
         self.model.train()
         train_loss = 0
-        for step, (inputs, mask, targets) in enumerate(self.train_loader):
+        for step, batch in enumerate(self.train_loader):
             if self.gpu is not None and self.device == 'cuda':
-                inputs = inputs.cuda(self.gpu, non_blocking=True)
-                input_mask = mask.cuda(self.gpu, non_blocking=True)
-                targets = targets.cuda(self.gpu, non_blocking=True)
+                if len(batch) == 2:
+                    inputs = batch['input_ids'].cuda(
+                        self.gpu, non_blocking=True)
+                    input_mask = batch['attention_mask'].cuda(
+                        self.gpu, non_blocking=True)
+                    targets = inputs
+                else:
+                    inputs = batch['input_ids'].cuda(
+                        self.gpu, non_blocking=True)
+                    input_mask = batch['attention_mask'].cuda(
+                        self.gpu, non_blocking=True)
+                    targets = batch['label_ids'].cuda(
+                        self.gpu, non_blocking=True)
             self.optimizer.zero_grad()
             outputs = self.model(
-                inputs, attention_mask=input_mask, labels=targets)
+                inputs,
+                attention_mask=input_mask if self.args.train.mask else None,
+                labels=targets)
             loss = outputs[0]
             # loss = self.criterion(outputs, targets)
             # if len(self.gpu) > 1:
@@ -137,12 +158,12 @@ class TrainingAgent:
             self.optimizer.step()
             if self.scheduler is not None:
                 self.scheduler.step()
-        return train_loss
+        return train_loss / (step + 1)
 
     def validate(self, epoch: int) -> float:
         self.model.eval()
         val_loss = 0
-        for inputs, mask, targets in self.val_loader:
+        for step, (inputs, mask, targets) in enumerate(self.val_loader):
             if self.gpu is not None and self.device == 'cuda':
                 inputs = inputs.cuda(self.gpu, non_blocking=True)
                 input_mask = mask.cuda(self.gpu, non_blocking=True)
@@ -154,7 +175,7 @@ class TrainingAgent:
             # if len(self.gpu) > 1:
             #     loss = loss.mean()
             val_loss += loss.item()
-        return val_loss
+        return val_loss / (step + 1)
 
 
 def main(args: Namespace) -> None:
