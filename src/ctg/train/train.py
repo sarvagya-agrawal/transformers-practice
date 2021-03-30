@@ -9,6 +9,9 @@ from pathlib import Path
 
 import time
 
+
+import torch.multiprocessing as mp
+import torch.distributed as dist
 import pandas as pd
 import torch
 import tqdm
@@ -21,33 +24,41 @@ from ..utils.io import create_dir
 
 
 class TrainingAgent:
-    config: Dict[str, Any] = None
-    train_loader = None
-    val_loader = None
-    model: torch.nn.Module = None
-    optimizer: torch.optim.Optimizer = None
-    scheduler = None
-    loss = None
-    output_filename: Path = None
-    checkpoint = None
-    stats: Dict[str, Any] = dict()
-
     def __init__(self, args: Namespace,) -> None:
+        self.train_loader = None
+        self.train_sampler = None
+        self.val_loader = None
+        self.val_sampler = None
+        self.model: torch.nn.Module = None
+        self.optimizer: torch.optim.Optimizer = None
+        self.scheduler = None
+        self.loss = None
+        self.output_filename: Path = None
+        self.checkpoint = None
+        self.stats: Dict[str, Any] = dict()
+
         self.args = args
-        self.gpu = self.args.train.gpu
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.gpu = args.gpu
         self.output_dir = create_dir(Path(self.args.io.output))
         self.checkpoint_dir = create_dir(Path(self.args.io.checkpoint))
         self.setup()
         logger.info("Training Agent initialized")
 
     def setup(self) -> None:
+        if self.args.distributed:
+            self.args.train.batch_size = int(self.args.train.batch_size /
+                                             self.args.ngpus_per_node)
+            self.args.data.num_workers = int((self.args.data.num_workers +
+                                              self.args.ngpus_per_node - 1) /
+                                             self.args.ngpus_per_node)
+
         logger.info(f"Grabbing tokenizer: {self.args.train.tokenizer}")
         self.tokenizer = get_tokenizer(self.args.train.tokenizer,
                                        self.args.io.cache_dir)
         self.task_setup()
         logger.info("Loading train dataset...")
-        self.train_loader = load_data(
+        self.train_loader, self.train_sampler = load_data(
             src_fname=Path(self.args.data.train_src),
             tgt_fname=Path(self.args.data.train_tgt) if self.args.data.val_tgt
             is not None else None,
@@ -55,11 +66,11 @@ class TrainingAgent:
             cache_dir=self.args.io.cache_dir,
             max_length=self.args.train.max_length,
             batch_size=self.args.train.batch_size,
-            num_workers=self.args.train.num_workers,
+            num_workers=self.args.data.num_workers,
             overwrite_cache=self.args.data.overwrite_cache,
             split='train')
         logger.info("Loading validation dataset...")
-        self.val_loader = load_data(
+        self.val_loader, self.val_sampler = load_data(
             src_fname=Path(self.args.data.val_src),
             tgt_fname=Path(self.args.data.val_tgt) if self.args.data.val_tgt
             is not None else None,
@@ -67,7 +78,7 @@ class TrainingAgent:
             cache_dir=self.args.io.cache_dir,
             max_length=self.args.train.max_length,
             batch_size=self.args.train.batch_size,
-            num_workers=self.args.train.num_workers,
+            num_workers=self.args.data.num_workers,
             overwrite_cache=self.args.data.overwrite_cache,
             split='val')
 
@@ -77,7 +88,20 @@ class TrainingAgent:
         self.model = get_model(self.args.train.model,
                                cache_dir=self.args.io.cache_dir,
                                pretrained=self.args.train.pretrained)
-        self.model.to(self.device)
+        # self.model.to(self.device)
+        if self.args.distributed:
+            if self.gpu is not None:
+                self.model.to(self.device)
+                self.model = torch.nn.parallel.DistributedDataParallel(
+                    self.model,
+                    device_ids=self.gpu)
+            else:
+                self.model.cuda()
+                self.model = torch.nn.parallel.DistributedDataParallel(
+                    self.model)
+        elif self.gpu is not None:
+            torch.cuda.set_device(self.gpu)
+            self.model = self.model.cuda(self.gpu)
         logger.info(f"Setting model to {self.device}")
         # if len(self.args.train.gpu) > 1:
         #     self.model = torch.nn.DataParallel(self.model)
@@ -131,6 +155,8 @@ class TrainingAgent:
     def run_epochs(self, trial: int, epochs: List[int]) -> None:
         # total_steps = len(self.train_loader) * self.config['max_epochs']
         for epoch in epochs:
+            if self.args.distributed:
+                self.train_sampler.set_poch(epoch)
             start_time = time.time()
             train_loss = self.epoch_iteration(trial, epoch)
             epoch_time = time.time()
@@ -170,7 +196,8 @@ class TrainingAgent:
                         self.gpu, non_blocking=True)
                     attention_mask = batch['attention_mask'].cuda(
                         self.gpu, non_blocking=True)
-                    targets = batch['labels'].cuda(self.gpu, non_blocking=True)
+                    targets = batch['labels'].cuda(
+                        self.gpu, non_blocking=True)
             self.optimizer.zero_grad()
             outputs = self.model(
                 inputs,
@@ -213,7 +240,8 @@ class TrainingAgent:
                         self.gpu, non_blocking=True)
                     attention_mask = batch['attention_mask'].cuda(
                         self.gpu, non_blocking=True)
-                    targets = batch['labels'].cuda(self.gpu, non_blocking=True)
+                    targets = batch['labels'].cuda(
+                        self.gpu, non_blocking=True)
             with torch.no_grad():
                 outputs = self.model(
                     inputs, attention_mask=attention_mask, labels=targets)
@@ -226,5 +254,23 @@ class TrainingAgent:
 
 
 def main(args: Namespace) -> None:
+    ngpus_per_node = torch.cude.device_count() if args.gpu is None else 1
+    args.distributed = (args.mpd or args.world_size > 1) and not args.cpu
+    if args.mpd and not args.cpu:
+        args.world_size *= ngpus_per_node
+        mp.spawn(worker, nprocs=ngpus_per_node,
+                 args=(ngpus_per_node, args))
+    else:
+        worker(args.gpu if not args.cpu else None, ngpus_per_node, args)
+
+
+def worker(gpu: int, ngpus_per_node: int, args: Namespace):
+    args.gpu = gpu
+    if args.distributed:
+        if args.mpd:
+            args.rank = args.rank * ngpus_per_node + gpu
+        dist.init_process_group(
+            backend=args.dist_backend, init_method=args.dist_url,
+            world_size=args.world_size, rank=args.rank)
     training_agent = TrainingAgent(args=args)
     training_agent.train()

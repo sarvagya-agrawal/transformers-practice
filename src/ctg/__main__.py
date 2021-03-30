@@ -12,7 +12,7 @@ from argparse import ArgumentParser
 import torch
 
 from .args import train_args, logging_args, data_args, test_args,\
-    decode_args, split_args
+    decode_args, split_args, general_args
 from .utils.io import config_file_parser
 from .decode import main as decode_main
 from .utils.logging import init_logger
@@ -30,6 +30,7 @@ parent_parser = ArgumentParser(description='TOD Parent Parser')
 #                            help='Config file path', type=yaml.safe_load)
 parent_parser.add_argument('--config', '-c',
                            help='Config file path', default=None)
+general_args(parser, parent_parser)
 parent_parser.add_argument(
     '--logs', help="Set output for log outputs",
     default=f"logs/tod_{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}.log",)

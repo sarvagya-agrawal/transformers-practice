@@ -103,7 +103,7 @@ def load_data(src_fname: PosixPath,
         batch_size=batch_size,
         # collate_fn=collate,
         pin_memory=False,
-        num_workers=num_workers)
+        num_workers=num_workers), sampler
 
 
 def read_lines(filename: Union[str, PosixPath]) -> List[str]:
