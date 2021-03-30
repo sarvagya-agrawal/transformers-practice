@@ -41,7 +41,7 @@ def general_args(parent_parser: ArgumentParser,
         help="Flag: CPU bound training: Default = False")
     sub_parser.set_defaults(cpu=False)
     sub_parser.add_argument(
-        '--gpu', default=0, type=int,
+        '--gpu', default=None, type=int,
         help='GPU id to use: Default = 0')
     sub_parser.add_argument(
         '--multiprocessing-distributed', action='store_true',
