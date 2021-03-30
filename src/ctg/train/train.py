@@ -96,7 +96,7 @@ class TrainingAgent:
                 self.model.to(self.device)
                 self.model = torch.nn.parallel.DistributedDataParallel(
                     self.model,
-                    device_ids=self.gpu)
+                    device_ids=[self.gpu])
             else:
                 self.model.cuda()
                 self.model = torch.nn.parallel.DistributedDataParallel(
