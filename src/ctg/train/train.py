@@ -38,8 +38,13 @@ class TrainingAgent:
         self.stats: Dict[str, Any] = dict()
 
         self.args = args
-        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.gpu = args.gpu
+        if isinstance(args.gpu, list):
+            self.gpu = args.gpu
+            g = ','.join([str(i) for i in args.gpu])
+            self.device = f'cuda:{g}' if torch.cuda.is_available() else 'cpu'
+        else:
+            self.gpu = args.gpu
+            self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.output_dir = create_dir(Path(self.args.io.output))
         self.checkpoint_dir = create_dir(Path(self.args.io.checkpoint))
         self.setup()
@@ -101,7 +106,10 @@ class TrainingAgent:
                 self.model.cuda()
                 self.model = torch.nn.parallel.DistributedDataParallel(
                     self.model)
-        elif self.gpu is not None:
+        elif isinstance(self.gpu, list):
+            self.model = torch.nn.DataParallel(self.model)
+            self.mode.to(self.device)
+        elif isinstance(self.gpu, int):
             torch.cuda.set_device(self.gpu)
             self.model = self.model.cuda(self.gpu)
         logger.info(f"Setting model to {self.device}")
@@ -181,25 +189,25 @@ class TrainingAgent:
         train_loss = 0
         for step, batch in enumerate(
                 tqdm.tqdm(self.train_loader, desc=f'Epoch {epoch} | Train')):
-            if self.gpu is not None and self.device == 'cuda':
+            if self.gpu is not None:
                 if len(batch) == 1:
-                    inputs = batch['input_ids'].cuda(
-                        self.gpu, non_blocking=True)
+                    inputs = batch['input_ids'].to(
+                        self.device, non_blocking=True)
                     attention_mask = None
                     targets = inputs
                 if len(batch) == 2:
-                    inputs = batch['input_ids'].cuda(
-                        self.gpu, non_blocking=True)
-                    attention_mask = batch['attention_mask'].cuda(
-                        self.gpu, non_blocking=True)
+                    inputs = batch['input_ids'].to(
+                        self.device, non_blocking=True)
+                    attention_mask = batch['attention_mask'].to(
+                        self.device, non_blocking=True)
                     targets = inputs
                 else:
-                    inputs = batch['input_ids'].cuda(
-                        self.gpu, non_blocking=True)
-                    attention_mask = batch['attention_mask'].cuda(
-                        self.gpu, non_blocking=True)
-                    targets = batch['labels'].cuda(
-                        self.gpu, non_blocking=True)
+                    inputs = batch['input_ids'].to(
+                        self.device, non_blocking=True)
+                    attention_mask = batch['attention_mask'].to(
+                        self.device, non_blocking=True)
+                    targets = batch['labels'].to(
+                        self.device, non_blocking=True)
             self.optimizer.zero_grad()
             outputs = self.model(
                 inputs,
@@ -225,25 +233,25 @@ class TrainingAgent:
         val_loss = 0
         for step, batch in enumerate(
                 tqdm.tqdm(self.val_loader, desc=f'Epoch {epoch} | Validate')):
-            if self.gpu is not None and self.device == 'cuda':
+            if self.gpu is not None:
                 if len(batch) == 1:
-                    inputs = batch['input_ids'].cuda(
-                        self.gpu, non_blocking=True)
+                    inputs = batch['input_ids'].to(
+                        self.device, non_blocking=True)
                     attention_mask = None
                     targets = inputs
                 if len(batch) == 2:
-                    inputs = batch['input_ids'].cuda(
-                        self.gpu, non_blocking=True)
-                    attention_mask = batch['attention_mask'].cuda(
-                        self.gpu, non_blocking=True)
+                    inputs = batch['input_ids'].to(
+                        self.device, non_blocking=True)
+                    attention_mask = batch['attention_mask'].to(
+                        self.device, non_blocking=True)
                     targets = inputs
                 else:
-                    inputs = batch['input_ids'].cuda(
-                        self.gpu, non_blocking=True)
-                    attention_mask = batch['attention_mask'].cuda(
-                        self.gpu, non_blocking=True)
-                    targets = batch['labels'].cuda(
-                        self.gpu, non_blocking=True)
+                    inputs = batch['input_ids'].to(
+                        self.device, non_blocking=True)
+                    attention_mask = batch['attention_mask'].to(
+                        self.device, non_blocking=True)
+                    targets = batch['labels'].to(
+                        self.device, non_blocking=True)
             with torch.no_grad():
                 outputs = self.model(
                     inputs, attention_mask=attention_mask, labels=targets)
