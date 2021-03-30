@@ -3,8 +3,8 @@ model: distilgpt2
 pretrained: True
 tokenizer: gpt2
 gpu: 0
-optimizer: Adam
-scheduler: None
+optimizer: AdamW
+scheduler: LinearLambdaLR
 batch-size: 32
 max-length: 512
 max-epochs: 250
@@ -14,19 +14,21 @@ loss: cross_entropy
 clip-grad: 1.0
 optimizer-kwargs:
   lr: 0.00005
+scheduler-kwargs:
+  num_warmup_steps: 0
 mask: False
-# scheduler-kwargs:  {}
 
 # Data Parameters
 name: multiwoz2.1
-train-src: dataset/train.txt
+train-src: _test-dataset/train.txt
 # train-tgt: /home/mat/github/U-of-T/grad-school/nlp/tod/simpletod/resources/gpt2/train.history_belief
-val-src: dataset/val.txt
+val-src: _test-dataset/val.txt
 # val-tgt: /home/mat/github/U-of-T/grad-school/nlp/tod/simpletod/resources/gpt2/val.history_belief
 task: causal
 overwrite_cache: True
 
 # io
-output: test-output
-checkpoint: test-checkpoint
-cache-dir: test-cache
+output: _test-output
+checkpoint: _test-checkpoint
+cache-dir: _test-cache
+save-freq: 1

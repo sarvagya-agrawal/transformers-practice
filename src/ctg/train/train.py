@@ -9,10 +9,9 @@ from pathlib import Path
 
 import time
 
-
+import pandas as pd
 import torch
 import tqdm
-
 
 from ..models import get_tokenizer, get_model
 from ..optim import get_optimizer_scheduler
@@ -31,6 +30,7 @@ class TrainingAgent:
     loss = None
     output_filename: Path = None
     checkpoint = None
+    stats: Dict[str, Any] = dict()
 
     def __init__(self, args: Namespace,) -> None:
         self.args = args
@@ -106,16 +106,23 @@ class TrainingAgent:
                 self.tokenizer.add_special_tokens(
                     {'eos_token': '<|endoftext|>'})
 
+    def save_stats(self) -> None:
+        pd.DataFrame(data=self.stats).to_csv(self.output_dir / 'stats.csv')
+
+    def save_checkpoint(self, stamp: str = '') -> None:
+        self.model.save_pretrained(
+            str(self.checkpoint_dir / f'model-check{stamp}'))
+        torch.save(self.optimizer.state_dict(), str(
+            self.checkpoint_dir / f'optimizer{stamp}.pt'))
+        if self.scheduler is not None:
+            torch.save(self.optimizer.state_dict(), str(
+                self.checkpoint_dir / f'scheduler{stamp}.pt'))
+
     def train(self) -> None:
         for trial in range(self.args.train.num_trials):
             self.reset()
             self.run_epochs(trial, range(0, self.args.train.max_epochs))
-        self.save()
-
-    def save(self) -> None:
-        self.model.save_pretrained(str(self.output_dir / 'checkpoint'))
-        torch.save(self.optimizer.state_dict(), str(
-            self.output_dir / 'optimizer.pt'))
+        self.save_checkpoint(stamp='-final')
 
     def run_epochs(self, trial: int, epochs: List[int]) -> None:
         # total_steps = len(self.train_loader) * self.config['max_epochs']
@@ -124,11 +131,18 @@ class TrainingAgent:
             train_loss = self.epoch_iteration(trial, epoch)
             epoch_time = time.time()
             val_loss = self.validate(epoch)
+            if self.scheduler is not None:
+                self.scheduler.step()
             end_time = time.time()
             logger.info(f"E time: {epoch_time - start_time} | "
                         f"T time {end_time - epoch_time} | " +
                         f"Train Loss {train_loss} | " +
                         f"Val Loss {val_loss}")
+            self.stats[epoch] = {
+                'train_loss': train_loss, 'val_loss': val_loss}
+            if epoch % self.args.io.save_freq == 0 and epoch > 0:
+                self.save_checkpoint(f"-{epoch}")
+            self.save_stats()
 
     def epoch_iteration(self, trial: int, epoch: int) -> float:
         self.model.train()
@@ -137,29 +151,13 @@ class TrainingAgent:
                 tqdm.tqdm(self.train_loader, desc=f'Epoch {epoch} | Train')):
             if self.gpu is not None and self.device == 'cuda':
                 if len(batch) == 1:
-                    # inputs = torch.LongTensor(batch['input_ids']).cuda(
-                    #     self.gpu, non_blocking=True)
-                    # input_mask = torch.LongTensor(batch['attention_mask']).cuda(
-                    #     self.gpu, non_blocking=True)
-                    # targets = inputs
                     inputs = batch.cuda(self.gpu, non_blocking=True)
                     targets = inputs
                 if len(batch) == 2:
-                    # inputs = torch.LongTensor(batch['input_ids']).cuda(
-                    #     self.gpu, non_blocking=True)
-                    # input_mask = torch.LongTensor(batch['attention_mask']).cuda(
-                    #     self.gpu, non_blocking=True)
-                    # targets = inputs
                     inputs = batch[0].cuda(self.gpu, non_blocking=True)
                     input_mask = batch[1].cuda(self.gpu, non_blocking=True)
                     targets = inputs
                 else:
-                    # inputs = torch.LongTensor(batch['input_ids']).cuda(
-                    #     self.gpu, non_blocking=True)
-                    # input_mask = torch.LongTensor(batch['attention_mask']).cuda(
-                    #     self.gpu, non_blocking=True)
-                    # targets = torch.LongTensor(batch['label_ids']).cuda(
-                    #     self.gpu, non_blocking=True)
                     inputs = batch[0].cuda(self.gpu, non_blocking=True)
                     input_mask = batch[1].cuda(self.gpu, non_blocking=True)
                     targets = batch[2].cuda(self.gpu, non_blocking=True)
@@ -180,8 +178,6 @@ class TrainingAgent:
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(),
                                                self.args.train.clip_grad)
             self.optimizer.step()
-            if self.scheduler is not None:
-                self.scheduler.step()
         return train_loss / (step + 1)
 
     def validate(self, epoch: int) -> float:
@@ -191,29 +187,13 @@ class TrainingAgent:
                 tqdm.tqdm(self.val_loader, desc=f'Epoch {epoch} | Validate')):
             if self.gpu is not None and self.device == 'cuda':
                 if len(batch) == 1:
-                    # inputs = torch.LongTensor(batch['input_ids']).cuda(
-                    #     self.gpu, non_blocking=True)
-                    # input_mask = torch.LongTensor(batch['attention_mask']).cuda(
-                    #     self.gpu, non_blocking=True)
-                    # targets = inputs
                     inputs = batch.cuda(self.gpu, non_blocking=True)
                     targets = inputs
                 if len(batch) == 2:
-                    # inputs = torch.LongTensor(batch['input_ids']).cuda(
-                    #     self.gpu, non_blocking=True)
-                    # input_mask = torch.LongTensor(batch['attention_mask']).cuda(
-                    #     self.gpu, non_blocking=True)
-                    # targets = inputs
                     inputs = batch[0].cuda(self.gpu, non_blocking=True)
                     input_mask = batch[1].cuda(self.gpu, non_blocking=True)
                     targets = inputs
                 else:
-                    # inputs = torch.LongTensor(batch['input_ids']).cuda(
-                    #     self.gpu, non_blocking=True)
-                    # input_mask = torch.LongTensor(batch['attention_mask']).cuda(
-                    #     self.gpu, non_blocking=True)
-                    # targets = torch.LongTensor(batch['label_ids']).cuda(
-                    #     self.gpu, non_blocking=True)
                     inputs = batch[0].cuda(self.gpu, non_blocking=True)
                     input_mask = batch[1].cuda(self.gpu, non_blocking=True)
                     targets = batch[2].cuda(self.gpu, non_blocking=True)

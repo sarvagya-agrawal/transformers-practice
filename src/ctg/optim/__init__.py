@@ -6,10 +6,13 @@
 from argparse import Namespace
 from typing import Dict, Any
 
+from torch.optim.lr_scheduler import StepLR
 from torch.optim import SGD, AdamW, Adam
 
+from .lambdalr import ConstantLambdaLR, LinearLambdaLR
+
 OPTIMIZERS = ['SGD', 'AdamW', 'Adam']
-SCHEDULERS = ['StepLRWarmup', 'StepLR', 'None', None]
+SCHEDULERS = ['LambdaLR', 'StepLR', 'None', None]
 
 
 def get_optimizer_scheduler(
@@ -18,12 +21,16 @@ def get_optimizer_scheduler(
         net_parameters,
         max_epochs: int,
         train_loader_len: int,
-        optimizer_kwargs: Dict[str, Any] = dict(),
-        scheduler_kwargs: Dict[str, Any] = dict()):
+        optimizer_kwargs: Dict[str, Any] = None,
+        scheduler_kwargs: Dict[str, Any] = None):
+    if optimizer_kwargs is None:
+        optimizer_kwargs = dict()
+    if scheduler_kwargs is None:
+        optimizer_kwargs = dict()
     optimizer = eval(optim_method)(net_parameters, **optimizer_kwargs)
-    if scheduler_method == 'StepLRWarmup':
-        scheduler_kwargs['num_train_steps'] = train_loader_len * \
+    if scheduler_method == 'LinearLambdaLR':
+        scheduler_kwargs['num_training_steps'] = train_loader_len * \
             max_epochs
     scheduler = None if scheduler_method == 'None' else eval(
-        scheduler_method)(net_parameters, **scheduler_kwargs)
+        scheduler_method)(optimizer, **scheduler_kwargs)
     return optimizer, scheduler
