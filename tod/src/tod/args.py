@@ -6,7 +6,7 @@
 from argparse import _ArgumentGroup
 from typing import List
 
-from configargparse import ArgumentParser, Namespace
+from argparse import ArgumentParser, Namespace
 
 
 from onmt.opts import model_opts, _add_train_general_opts, \

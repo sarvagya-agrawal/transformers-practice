@@ -8,12 +8,11 @@ from pathlib import Path
 from transformers import BertTokenizer, OpenAIGPTTokenizer, GPT2Tokenizer
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from transformers import GPT2Config, GPT2LMHeadModel
-# from configargparse import Namespace
 
 import torch
 
 TOKENIZERS = ['bert-base-uncased', 'openai-gpt']
-MODELS = ['gpt2', 'gpt2-small']
+MODELS = ['gpt2', 'gpt2-small', 'distilgpt2']
 
 
 def get_tokenizer(tokenizer_name: str,
@@ -39,9 +38,12 @@ def get_model(model_name: str,
     if model_name == 'gpt2':
         _model = GPT2LMHeadModel
         _config = GPT2Config
-    if model_name == 'gpt2-small':
+    elif model_name == 'gpt2-small':
         _model = GPT2LMHeadModel
         _config = None
+    elif model_name == 'distilgpt2':
+        _model = GPT2LMHeadModel
+        _config = GPT2Config
     if pretrained:
         model = _model.from_pretrained(
             model_name,

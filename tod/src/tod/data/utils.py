@@ -12,7 +12,7 @@ from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 # from transformers import LineByLineTextDataset
 from torch.utils.data import Dataset, DataLoader, \
     RandomSampler, SequentialSampler
-# from torch.nn.utils.rnn import pad_sequence
+from torch.nn.utils.rnn import pad_sequence
 # from datasets import load_dataset
 
 
@@ -25,14 +25,15 @@ class LineByLineTextDataset(Dataset):
         self.examples = tokenizer.batch_encode_plus(
             lines, add_special_tokens=True,
             truncation=True,
-            max_length=block_size)
+            max_length=block_size)['input_ids']
 
     def __len__(self):
-        return len(self.examples['input_ids'])
+        return len(self.examples)
 
     def __getitem__(self, i):
-        return (torch.LongTensor(self.examples['input_ids'][i]),
-                torch.LongTensor(self.examples['attention_mask'][i]))
+        # return (torch.LongTensor(self.examples['input_ids'][i]),
+        #         torch.LongTensor(self.examples['attention_mask'][i]))
+        return torch.LongTensor(self.examples[i])
 
 
 def load_data(src_fname: PosixPath,
@@ -71,12 +72,11 @@ def load_data(src_fname: PosixPath,
     #         max_length=max_length,
     #         truncation=True,)
 
-    # def collate(examples):
-    #     examples[0] = pad_sequence(
-    #         examples[0], batch_first=True,
-    #         padding_value=tokenizer.pad_token_id if
-    #         tokenizer._pad_token is not None else 0.)
-    #     return examples
+    def collate(examples):
+        return pad_sequence(
+            examples, batch_first=True,
+            padding_value=tokenizer.pad_token_id if
+            tokenizer._pad_token is not None else 0.)
     # dataset = dataset.map(
     #     tokenize,
     #     batched=True,
@@ -90,7 +90,7 @@ def load_data(src_fname: PosixPath,
         dataset,
         sampler=sampler,
         batch_size=batch_size,
-        # collate_fn=collate,
+        collate_fn=collate,
         num_workers=num_workers)
 
 

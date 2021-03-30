@@ -3,7 +3,7 @@
 @github: MathieuTuli
 @email: tuli.mathieu@gmail.com
 """
-from configargparse import Namespace
+from argparse import Namespace
 
 # from onmt.bin.train import train as onmt_train
 from .train import main as train_main

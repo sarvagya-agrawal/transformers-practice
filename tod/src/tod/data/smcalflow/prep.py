@@ -12,7 +12,7 @@ import jsons
 import re
 
 from pydantic.dataclasses import dataclass
-from configargparse import Namespace
+from argparse import Namespace
 from tqdm import tqdm
 
 import dataclasses

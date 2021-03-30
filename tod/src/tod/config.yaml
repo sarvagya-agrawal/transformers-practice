@@ -1,11 +1,11 @@
 # Train parameters
-model: gpt2
+model: distilgpt2
 pretrained: True
 tokenizer: gpt2
 gpu: 0
 optimizer: Adam
 scheduler: None
-batch-size: 1
+batch-size: 32
 max-length: 512
 max-epochs: 250
 num-workers: 4
@@ -13,7 +13,7 @@ num-trials: 1
 loss: cross_entropy
 clip-grad: 1.0
 optimizer-kwargs:
-  lr: 0.1
+  lr: 0.00005
 mask: False
 # scheduler-kwargs:  {}
 

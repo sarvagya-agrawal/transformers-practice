@@ -4,7 +4,7 @@
 @email: tuli.mathieu@gmail.com
 """
 # from onmt.bin.build_vocab import build_vocab_main
-from configargparse import Namespace
+from argparse import Namespace
 
 from ..utils.logging import logger
 from .smcalflow.prep import main as prep_smcalflow_main
