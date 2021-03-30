@@ -99,7 +99,7 @@ class TrainingAgent:
         logger.info("Done reset")
 
     def task_setup(self) -> None:
-        if self.args.data.name == 'MultiWOZ':
+        if self.args.data.name == 'multiwoz2.1':
             if self.args.data.task == 'causal':
                 self.tokenizer.add_special_tokens(
                     {'bos_token': '<|endoftext|>'})
@@ -152,19 +152,20 @@ class TrainingAgent:
             if self.gpu is not None and self.device == 'cuda':
                 if len(batch) == 1:
                     inputs = batch.cuda(self.gpu, non_blocking=True)
+                    attention_mask = None
                     targets = inputs
                 if len(batch) == 2:
                     inputs = batch[0].cuda(self.gpu, non_blocking=True)
-                    input_mask = batch[1].cuda(self.gpu, non_blocking=True)
+                    attention_mask = batch[1].cuda(self.gpu, non_blocking=True)
                     targets = inputs
                 else:
                     inputs = batch[0].cuda(self.gpu, non_blocking=True)
-                    input_mask = batch[1].cuda(self.gpu, non_blocking=True)
+                    attention_mask = batch[1].cuda(self.gpu, non_blocking=True)
                     targets = batch[2].cuda(self.gpu, non_blocking=True)
             self.optimizer.zero_grad()
             outputs = self.model(
                 inputs,
-                attention_mask=input_mask if self.args.train.mask else None,
+                attention_mask=attention_mask,
                 labels=targets)
             loss = outputs[0]
             # loss = self.criterion(outputs, targets)

@@ -5,7 +5,7 @@ tokenizer: gpt2
 gpu: 0
 optimizer: AdamW
 scheduler: LinearLambdaLR
-batch-size: 32
+batch-size: 1
 max-length: 512
 max-epochs: 250
 num-workers: 4
@@ -31,4 +31,4 @@ overwrite_cache: True
 output: _test-output
 checkpoint: _test-checkpoint
 cache-dir: _test-cache
-save-freq: 1
+save-freq: 25

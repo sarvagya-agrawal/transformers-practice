@@ -29,6 +29,9 @@ def get_tokenizer(tokenizer_name: str,
             tokenizer_name, cache_dir=cache_dir)
     else:
         raise ValueError(f'Unknown tokenizer. Must be one of {TOKENIZERS}')
+    if tokenizer._pad_token is None:
+        tokenizer.add_special_tokens(
+            {'pad_token': '[PAD]'})
     return tokenizer
 
 

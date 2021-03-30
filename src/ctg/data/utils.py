@@ -7,6 +7,7 @@ from typing import List, Union, Dict
 from pathlib import PosixPath
 
 import torch
+import numpy as np
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 # from transformers import LineByLineTextDataset
@@ -17,15 +18,21 @@ from torch.nn.utils.rnn import pad_sequence
 
 
 class LineByLineTextDataset(Dataset):
-    def __init__(self, tokenizer, file_path, block_size=512):
+    def __init__(self, tokenizer, file_path, max_length=512):
         with open(file_path, encoding="utf-8") as f:
             lines = [line for line in f.read().splitlines() if (
                 len(line) > 0 and not line.isspace())]
 
-        self.examples = tokenizer.batch_encode_plus(
-            lines, add_special_tokens=True,
+        tokenized = tokenizer.batch_encode_plus(
+            lines,
+            add_special_tokens=True,
+            padding=True,
+            return_tensors='pt',
+            return_attention_mask=True,
             truncation=True,
-            max_length=block_size)['input_ids']
+            max_length=max_length)
+        self.examples = tokenized['input_ids']
+        self.masks = tokenized['attention_mask']
 
     def __len__(self):
         return len(self.examples)
@@ -33,7 +40,9 @@ class LineByLineTextDataset(Dataset):
     def __getitem__(self, i):
         # return (torch.LongTensor(self.examples['input_ids'][i]),
         #         torch.LongTensor(self.examples['attention_mask'][i]))
-        return torch.LongTensor(self.examples[i])
+        # return torch.LongTensor(self.examples[i])
+        return (self.examples[i],
+                self.masks[i])
 
 
 def load_data(src_fname: PosixPath,
@@ -59,7 +68,7 @@ def load_data(src_fname: PosixPath,
         #                        data_files={split: str(src_fname)},
         #                        cache_dir=cache_dir, split=split)
         dataset = LineByLineTextDataset(tokenizer, file_path=str(src_fname),
-                                        block_size=max_length)
+                                        max_length=max_length)
 
     # def tokenize(examples: List[str]) -> Tuple[List[int], None]:
     #     examples["text"] = [line for line in examples["text"] if len(line) > 0
@@ -74,7 +83,7 @@ def load_data(src_fname: PosixPath,
 
     def collate(examples):
         return pad_sequence(
-            examples, batch_first=True,
+            np.array(examples), batch_first=True,
             padding_value=tokenizer.pad_token_id if
             tokenizer._pad_token is not None else 0.)
     # dataset = dataset.map(
@@ -90,7 +99,7 @@ def load_data(src_fname: PosixPath,
         dataset,
         sampler=sampler,
         batch_size=batch_size,
-        collate_fn=collate,
+        # collate_fn=collate,
         num_workers=num_workers)
 
 
