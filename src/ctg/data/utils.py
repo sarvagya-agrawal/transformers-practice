@@ -3,7 +3,7 @@
 @github: MathieuTuli
 @email: tuli.mathieu@gmail.com
 """
-from typing import List, Union, Dict
+from typing import List, Union, Dict, Tuple
 from pathlib import PosixPath
 
 import torch
@@ -14,7 +14,7 @@ from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from torch.utils.data import Dataset, DataLoader, \
     RandomSampler, SequentialSampler
 from torch.nn.utils.rnn import pad_sequence
-# from datasets import load_dataset
+from datasets import load_dataset
 
 
 class LineByLineTextDataset(Dataset):
@@ -64,35 +64,37 @@ def load_data(src_fname: PosixPath,
     if tgt_fname is not None:
         pass
     else:
-        # dataset = load_dataset('text',
-        #                        data_files={split: str(src_fname)},
-        #                        cache_dir=cache_dir, split=split)
-        dataset = LineByLineTextDataset(tokenizer, file_path=str(src_fname),
-                                        max_length=max_length)
+        dataset = load_dataset('text',
+                               data_files={split: str(src_fname)},
+                               cache_dir=cache_dir, split=split)
+        # dataset = LineByLineTextDataset(tokenizer, file_path=str(src_fname),
+        #                                 max_length=max_length)
 
-    # def tokenize(examples: List[str]) -> Tuple[List[int], None]:
-    #     examples["text"] = [line for line in examples["text"] if len(line) > 0
-    #                         and not line.isspace()]
-    #     tokenizer.add_special_tokens({'pad_token': '<PAD>'})
-    #     return tokenizer(
-    #         examples['text'],
-    #         add_special_tokens=True,
-    #         padding='max_length',
-    #         max_length=max_length,
-    #         truncation=True,)
+    def tokenize(examples: List[str]) -> Tuple[List[int], None]:
+        examples["text"] = [line for line in examples["text"] if len(line) > 0
+                            and not line.isspace()]
+        return tokenizer(
+            examples['text'],
+            add_special_tokens=True,
+            padding='max_length',
+            max_length=max_length,
+            return_tensors='np',
+            truncation=True)
 
     def collate(examples):
         return pad_sequence(
             np.array(examples), batch_first=True,
             padding_value=tokenizer.pad_token_id if
             tokenizer._pad_token is not None else 0.)
-    # dataset = dataset.map(
-    #     tokenize,
-    #     batched=True,
-    #     remove_columns=['text'],
-    #     num_proc=num_workers,
-    #     load_from_cache_file=not overwrite_cache
-    # )
+    dataset = dataset.map(
+        tokenize,
+        batched=True,
+        remove_columns=['text'],
+        num_proc=num_workers,
+        # batch_size=batch_size,
+        load_from_cache_file=not overwrite_cache
+    )
+    dataset.set_format(type='torch')
     sampler = RandomSampler(dataset) if split == 'train'\
         else SequentialSampler(dataset)
     return DataLoader(
@@ -100,6 +102,7 @@ def load_data(src_fname: PosixPath,
         sampler=sampler,
         batch_size=batch_size,
         # collate_fn=collate,
+        pin_memory=False,
         num_workers=num_workers)
 
 

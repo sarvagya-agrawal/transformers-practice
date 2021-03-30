@@ -5,7 +5,7 @@ tokenizer: gpt2
 gpu: 0
 optimizer: AdamW
 scheduler: LinearLambdaLR
-batch-size: 1
+batch-size: 8
 max-length: 512
 max-epochs: 250
 num-workers: 4

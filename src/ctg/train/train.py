@@ -105,6 +105,10 @@ class TrainingAgent:
                     {'bos_token': '<|endoftext|>'})
                 self.tokenizer.add_special_tokens(
                     {'eos_token': '<|endoftext|>'})
+            if self.tokenizer._pad_token is None:
+                # tokenizer.add_special_tokens(
+                #     {'pad_token': '[PAD]'})
+                self.tokenizer.pad_token = 0.
 
     def save_stats(self) -> None:
         pd.DataFrame(data=self.stats).to_csv(self.output_dir / 'stats.csv')
@@ -151,17 +155,22 @@ class TrainingAgent:
                 tqdm.tqdm(self.train_loader, desc=f'Epoch {epoch} | Train')):
             if self.gpu is not None and self.device == 'cuda':
                 if len(batch) == 1:
-                    inputs = batch.cuda(self.gpu, non_blocking=True)
+                    inputs = batch['input_ids'].cuda(
+                        self.gpu, non_blocking=True)
                     attention_mask = None
                     targets = inputs
                 if len(batch) == 2:
-                    inputs = batch[0].cuda(self.gpu, non_blocking=True)
-                    attention_mask = batch[1].cuda(self.gpu, non_blocking=True)
+                    inputs = batch['input_ids'].cuda(
+                        self.gpu, non_blocking=True)
+                    attention_mask = batch['attention_mask'].cuda(
+                        self.gpu, non_blocking=True)
                     targets = inputs
                 else:
-                    inputs = batch[0].cuda(self.gpu, non_blocking=True)
-                    attention_mask = batch[1].cuda(self.gpu, non_blocking=True)
-                    targets = batch[2].cuda(self.gpu, non_blocking=True)
+                    inputs = batch['input_ids'].cuda(
+                        self.gpu, non_blocking=True)
+                    attention_mask = batch['attention_mask'].cuda(
+                        self.gpu, non_blocking=True)
+                    targets = batch['labels'].cuda(self.gpu, non_blocking=True)
             self.optimizer.zero_grad()
             outputs = self.model(
                 inputs,
@@ -189,17 +198,22 @@ class TrainingAgent:
                 tqdm.tqdm(self.val_loader, desc=f'Epoch {epoch} | Validate')):
             if self.gpu is not None and self.device == 'cuda':
                 if len(batch) == 1:
-                    inputs = batch.cuda(self.gpu, non_blocking=True)
+                    inputs = batch['input_ids'].cuda(
+                        self.gpu, non_blocking=True)
                     attention_mask = None
                     targets = inputs
                 if len(batch) == 2:
-                    inputs = batch[0].cuda(self.gpu, non_blocking=True)
-                    attention_mask = batch[1].cuda(self.gpu, non_blocking=True)
+                    inputs = batch['input_ids'].cuda(
+                        self.gpu, non_blocking=True)
+                    attention_mask = batch['attention_mask'].cuda(
+                        self.gpu, non_blocking=True)
                     targets = inputs
                 else:
-                    inputs = batch[0].cuda(self.gpu, non_blocking=True)
-                    attention_mask = batch[1].cuda(self.gpu, non_blocking=True)
-                    targets = batch[2].cuda(self.gpu, non_blocking=True)
+                    inputs = batch['input_ids'].cuda(
+                        self.gpu, non_blocking=True)
+                    attention_mask = batch['attention_mask'].cuda(
+                        self.gpu, non_blocking=True)
+                    targets = batch['labels'].cuda(self.gpu, non_blocking=True)
             with torch.no_grad():
                 outputs = self.model(
                     inputs, attention_mask=attention_mask, labels=targets)
