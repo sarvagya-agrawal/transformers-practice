@@ -159,7 +159,10 @@ class TrainingAgent:
         for trial in range(self.args.train.num_trials):
             self.reset()
             self.run_epochs(trial, range(0, self.args.train.max_epochs))
-        self.save_checkpoint(stamp='-final')
+        if not self.args.mpd or (
+            self.args.mpd and
+                self.args.rank % self.args.ngpus_per_node == 0):
+            self.save_checkpoint(stamp='-final')
 
     def run_epochs(self, trial: int, epochs: List[int]) -> None:
         # total_steps = len(self.train_loader) * self.config['max_epochs']
@@ -180,7 +183,10 @@ class TrainingAgent:
             self.stats[epoch] = {
                 'train_loss': train_loss, 'val_loss': val_loss}
             if epoch % self.args.io.save_freq == 0 and epoch > 0:
-                self.save_checkpoint(f"-{epoch}")
+                if not self.args.mpd or (
+                    self.args.mpd and
+                        self.args.rank % self.args.ngpus_per_node == 0):
+                    self.save_checkpoint(f"-{epoch}")
             self.save_stats()
 
     def epoch_iteration(self, trial: int, epoch: int) -> float:
