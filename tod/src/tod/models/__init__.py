@@ -1,5 +1,8 @@
 """
 @author: Sarvagya Agrawal
+@author: Mathieu Tuli
+@github: MathieuTuli
+@email: tuli.mathieu@gmail.com
 """
 from pathlib import Path
 
