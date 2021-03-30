@@ -53,7 +53,8 @@ def load_data(src_fname: PosixPath,
               tgt_fname: PosixPath = None,
               overwrite_cache: bool = False,
               num_workers: int = 4,
-              split='train') -> None:
+              split: str = 'train',
+              distributed: bool = False) -> None:
     if src_fname.suffix not in set(['.txt']) or not src_fname.exists():
         raise ValueError(f"Unknown src file {src_fname}. Files must be",
                          "line-by-line .txt files")
@@ -95,8 +96,12 @@ def load_data(src_fname: PosixPath,
         load_from_cache_file=not overwrite_cache
     )
     dataset.set_format(type='torch')
-    sampler = RandomSampler(dataset) if split == 'train'\
-        else SequentialSampler(dataset)
+    if not distributed:
+        sampler = RandomSampler(dataset) if split == 'train'\
+            else SequentialSampler(dataset)
+    else:
+        sampler = torch.utils.data.distributed.DistributedSampler(dataset) if \
+            split == 'train' else SequentialSampler(dataset)
     return DataLoader(
         dataset,
         sampler=sampler,

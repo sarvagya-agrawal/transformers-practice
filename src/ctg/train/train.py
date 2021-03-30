@@ -68,7 +68,8 @@ class TrainingAgent:
             batch_size=self.args.train.batch_size,
             num_workers=self.args.data.num_workers,
             overwrite_cache=self.args.data.overwrite_cache,
-            split='train')
+            split='train',
+            distributed=self.args.distributed)
         logger.info("Loading validation dataset...")
         self.val_loader, self.val_sampler = load_data(
             src_fname=Path(self.args.data.val_src),
@@ -80,7 +81,8 @@ class TrainingAgent:
             batch_size=self.args.train.batch_size,
             num_workers=self.args.data.num_workers,
             overwrite_cache=self.args.data.overwrite_cache,
-            split='val')
+            split='val',
+            distributed=self.args.distributed)
 
     def reset(self) -> None:
         logger.info("Starting trial reset...")
