@@ -158,7 +158,7 @@ class TrainingAgent:
         # total_steps = len(self.train_loader) * self.config['max_epochs']
         for epoch in epochs:
             if self.args.distributed:
-                self.train_sampler.set_poch(epoch)
+                self.train_sampler.set_epoch(epoch)
             start_time = time.time()
             train_loss = self.epoch_iteration(trial, epoch)
             epoch_time = time.time()
