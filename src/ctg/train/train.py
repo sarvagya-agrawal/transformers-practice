@@ -272,6 +272,8 @@ def main(args: Namespace) -> None:
     args.ngpus_per_node = ngpus_per_node = torch.cuda.device_count() if \
         args.gpu is None else 1 if isinstance(args.gpu, int) else len(args.gpu)
     args.distributed = (args.mpd or args.world_size > 1) and not args.cpu
+    logger.info(f"GPU: {args.gpu}")
+    logger.info(f"NGPUS: {ngpus_per_node}")
     if args.mpd and not args.cpu:
         args.world_size *= ngpus_per_node
         mp.spawn(worker, nprocs=ngpus_per_node,
