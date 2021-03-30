@@ -27,7 +27,7 @@ class LineByLineTextDataset(Dataset):
             lines,
             add_special_tokens=True,
             padding=True,
-            return_tensors='pt',
+            # return_tensors='pt',
             return_attention_mask=True,
             truncation=True,
             max_length=max_length)
@@ -41,8 +41,8 @@ class LineByLineTextDataset(Dataset):
         # return (torch.LongTensor(self.examples['input_ids'][i]),
         #         torch.LongTensor(self.examples['attention_mask'][i]))
         # return torch.LongTensor(self.examples[i])
-        return (self.examples[i],
-                self.masks[i])
+        return (torch.LongTensor(self.examples[i]),
+                torch.LongTensor(self.masks[i]))
 
 
 def load_data(src_fname: PosixPath,

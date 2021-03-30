@@ -167,6 +167,7 @@ class TrainingAgent:
                 inputs,
                 attention_mask=attention_mask,
                 labels=targets)
+            del inputs, attention_mask, targets
             loss = outputs[0]
             # loss = self.criterion(outputs, targets)
             # if len(self.gpu) > 1:
@@ -189,18 +190,20 @@ class TrainingAgent:
             if self.gpu is not None and self.device == 'cuda':
                 if len(batch) == 1:
                     inputs = batch.cuda(self.gpu, non_blocking=True)
+                    attention_mask = None
                     targets = inputs
                 if len(batch) == 2:
                     inputs = batch[0].cuda(self.gpu, non_blocking=True)
-                    input_mask = batch[1].cuda(self.gpu, non_blocking=True)
+                    attention_mask = batch[1].cuda(self.gpu, non_blocking=True)
                     targets = inputs
                 else:
                     inputs = batch[0].cuda(self.gpu, non_blocking=True)
-                    input_mask = batch[1].cuda(self.gpu, non_blocking=True)
+                    attention_mask = batch[1].cuda(self.gpu, non_blocking=True)
                     targets = batch[2].cuda(self.gpu, non_blocking=True)
             with torch.no_grad():
                 outputs = self.model(
-                    inputs, attention_mask=input_mask, labels=targets)
+                    inputs, attention_mask=attention_mask, labels=targets)
+            del inputs, attention_mask, targets
             loss = outputs[0]
             # if len(self.gpu) > 1:
             #     loss = loss.mean()
