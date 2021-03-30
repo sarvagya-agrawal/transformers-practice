@@ -6,8 +6,9 @@
 """
 from pathlib import Path
 
+from transformers import BertTokenizer, OpenAIGPTTokenizer, GPT2Tokenizer
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
-from transformers import GPT2Config, GPT2LMHeadModel, GPT2Tokenizer
+from transformers import GPT2Config, GPT2LMHeadModel
 
 import torch
 
@@ -18,7 +19,13 @@ MODELS = ['gpt2', 'distilgpt2']
 def get_tokenizer(tokenizer_name: str,
                   cache_dir: Path,
                   lower_case: bool = True) -> PreTrainedTokenizerBase:
-    if tokenizer_name in set(("gpt2")):
+    if tokenizer_name == 'bert-base-uncased':
+        tokenizer = BertTokenizer.from_pretrained(
+            tokenizer_name, cache_dir=cache_dir)
+    elif tokenizer_name == 'openai-gpt':
+        tokenizer = OpenAIGPTTokenizer.from_pretrained(
+            tokenizer_name, cache_dir=cache_dir)
+    elif tokenizer_name == 'gpt2':
         tokenizer = GPT2Tokenizer.from_pretrained(
             tokenizer_name, cache_dir=cache_dir)
     else:
@@ -39,7 +46,7 @@ def get_model(model_name: str,
         model = _model.from_pretrained(
             model_name,
             cache_dir=cache_dir,
-            config=_config(model_name))
+            config=_config.from_pretrained(model_name))
     else:
         model = _model(
             config=_config(model_name))
