@@ -7,4 +7,5 @@ from pathlib import Path
 
 
 def create_dir(dname: Path) -> None:
-    ...
+    dname.mkdir(exists_ok=True, parents=True)
+    return dname
