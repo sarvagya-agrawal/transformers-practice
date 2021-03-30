@@ -108,7 +108,7 @@ class TrainingAgent:
                     self.model)
         elif isinstance(self.gpu, list):
             self.model = torch.nn.DataParallel(self.model)
-            self.mode.to(self.device)
+            self.model.to(self.device)
         elif isinstance(self.gpu, int):
             torch.cuda.set_device(self.gpu)
             self.model = self.model.cuda(self.gpu)
