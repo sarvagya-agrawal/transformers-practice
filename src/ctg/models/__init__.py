@@ -1,6 +1,5 @@
 """
-@author: Sarvagya Agrawal
-@author: Mathieu Tuli
+@author: Mathieu Tuli, Sarvagya Agrawal
 @github: MathieuTuli
 @email: tuli.mathieu@gmail.com
 """

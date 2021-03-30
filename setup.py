@@ -2,7 +2,7 @@ from setuptools import setup
 from glob import glob
 
 setup(
-    name='tod',
+    name='ctg',
     use_scm_version=True,
     packages=[''],
     package_dir={'': 'src'},

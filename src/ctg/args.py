@@ -9,8 +9,6 @@ from typing import List
 from argparse import ArgumentParser, Namespace
 
 
-from onmt.opts import model_opts, _add_train_general_opts, \
-    _add_train_dynamic_data, translate_opts
 from .data.args import prep_smcalflow_args  # , build_vocab_args
 from .test.args import test_smcalflow_args
 from .utils.logging import LogLevel

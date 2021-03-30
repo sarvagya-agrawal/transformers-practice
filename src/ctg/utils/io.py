@@ -3,6 +3,8 @@
 @github: MathieuTuli
 @email: tuli.mathieu@gmail.com
 """
+from pathlib import Path
+
 from argparse import Namespace
 import yaml
 
@@ -14,3 +16,8 @@ def config_file_parser(args: Namespace) -> Namespace:
         if k.replace('_', '-') in config:
             args.__dict__[k] = config[k.replace('_', '-')]
     return args
+
+
+def create_dir(dname: Path) -> None:
+    dname.mkdir(exist_ok=True, parents=True)
+    return dname

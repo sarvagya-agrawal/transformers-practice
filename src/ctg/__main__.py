@@ -13,9 +13,9 @@ import torch
 
 from .args import train_args, logging_args, data_args, test_args,\
     decode_args, split_args
+from .utils.io import config_file_parser
 from .decode import main as decode_main
 from .utils.logging import init_logger
-from .utils import config_file_parser
 from .train import main as train_main
 from .test import main as test_main
 from .data import main as data_main
