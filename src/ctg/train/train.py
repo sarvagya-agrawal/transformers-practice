@@ -40,8 +40,7 @@ class TrainingAgent:
         self.args = args
         if isinstance(args.gpu, list):
             self.gpu = args.gpu
-            g = ','.join([str(i) for i in args.gpu])
-            self.device = f'cuda:{g}' if torch.cuda.is_available() else 'cpu'
+            self.device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
         else:
             self.gpu = args.gpu
             self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -216,8 +215,8 @@ class TrainingAgent:
             del inputs, attention_mask, targets
             loss = outputs[0]
             # loss = self.criterion(outputs, targets)
-            # if len(self.gpu) > 1:
-            #     loss = loss.mean()
+            if isinstance(self.gpu, list):
+                loss = loss.mean()
             # if self.args.train.gradient_accumulation_steps > 1:
             # loss /= self.args.train.gradient_accumulation_steps
             train_loss += loss.item()
@@ -257,8 +256,8 @@ class TrainingAgent:
                     inputs, attention_mask=attention_mask, labels=targets)
             del inputs, attention_mask, targets
             loss = outputs[0]
-            # if len(self.gpu) > 1:
-            #     loss = loss.mean()
+            if isinstance(self.gpu, list):
+                loss = loss.mean()
             val_loss += loss.item()
         return val_loss / (step + 1)
 
