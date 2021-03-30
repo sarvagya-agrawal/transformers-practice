@@ -3,7 +3,7 @@
 @github: MathieuTuli
 @email: tuli.mathieu@gmail.com
 """
-from configargparse import Namespace
+from argparse import Namespace
 from typing import Dict, Any
 
 from torch.optim import SGD, AdamW, Adam

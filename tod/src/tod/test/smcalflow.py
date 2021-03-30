@@ -11,7 +11,7 @@ from typing import Dict, Iterator, List, Union, Tuple, Optional
 import csv
 
 from pydantic.dataclasses import dataclass
-from configargparse import Namespace
+from argparse import Namespace
 from more_itertools import chunked
 
 import pandas as pd

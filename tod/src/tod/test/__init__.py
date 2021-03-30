@@ -3,7 +3,7 @@
 @github: MathieuTuli
 @email: tuli.mathieu@gmail.com
 """
-from configargparse import Namespace
+from argparse import Namespace
 
 from .smcalflow import main as smcalflow_main
 from ..utils.logging import logger

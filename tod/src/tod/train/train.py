@@ -4,13 +4,15 @@
 @email: tuli.mathieu@gmail.com
 """
 from typing import Dict, Any, List
+from argparse import Namespace
 from pathlib import Path
 
 import time
 
-from configargparse import Namespace
 
 import torch
+import tqdm
+
 
 from ..models import get_tokenizer, get_model
 from ..optim import get_optimizer_scheduler
@@ -70,6 +72,7 @@ class TrainingAgent:
             split='val')
 
     def reset(self) -> None:
+        logger.info("Starting trial reset...")
         logger.info("Loading model...")
         self.model = get_model(self.args.train.model,
                                cache_dir=self.args.io.cache_dir,
@@ -93,7 +96,7 @@ class TrainingAgent:
         # self.loss = torch.nn.CrossEntropyLos() if self.args.train.loss ==\
         #     'cross_entropy' else None
         # self.loss.to(self.device)
-        logger.info("Done reset()")
+        logger.info("Done reset")
 
     def task_setup(self) -> None:
         if self.args.data.name == 'MultiWOZ':
@@ -107,6 +110,12 @@ class TrainingAgent:
         for trial in range(self.args.train.num_trials):
             self.reset()
             self.run_epochs(trial, range(0, self.args.train.max_epochs))
+        self.save()
+
+    def save(self) -> None:
+        self.model.save_pretrained(str(self.output_dir / 'checkpoint'))
+        torch.save(self.optimizer.state_dict(), str(
+            self.output_dir / 'optimizer.pt'))
 
     def run_epochs(self, trial: int, epochs: List[int]) -> None:
         # total_steps = len(self.train_loader) * self.config['max_epochs']
@@ -124,8 +133,17 @@ class TrainingAgent:
     def epoch_iteration(self, trial: int, epoch: int) -> float:
         self.model.train()
         train_loss = 0
-        for step, batch in enumerate(self.train_loader):
+        for step, batch in enumerate(
+                tqdm.tqdm(self.train_loader, desc=f'Epoch {epoch} | Train')):
             if self.gpu is not None and self.device == 'cuda':
+                if len(batch) == 1:
+                    # inputs = torch.LongTensor(batch['input_ids']).cuda(
+                    #     self.gpu, non_blocking=True)
+                    # input_mask = torch.LongTensor(batch['attention_mask']).cuda(
+                    #     self.gpu, non_blocking=True)
+                    # targets = inputs
+                    inputs = batch.cuda(self.gpu, non_blocking=True)
+                    targets = inputs
                 if len(batch) == 2:
                     # inputs = torch.LongTensor(batch['input_ids']).cuda(
                     #     self.gpu, non_blocking=True)
@@ -169,8 +187,17 @@ class TrainingAgent:
     def validate(self, epoch: int) -> float:
         self.model.eval()
         val_loss = 0
-        for step, batch in enumerate(self.val_loader):
+        for step, batch in enumerate(
+                tqdm.tqdm(self.val_loader, desc=f'Epoch {epoch} | Validate')):
             if self.gpu is not None and self.device == 'cuda':
+                if len(batch) == 1:
+                    # inputs = torch.LongTensor(batch['input_ids']).cuda(
+                    #     self.gpu, non_blocking=True)
+                    # input_mask = torch.LongTensor(batch['attention_mask']).cuda(
+                    #     self.gpu, non_blocking=True)
+                    # targets = inputs
+                    inputs = batch.cuda(self.gpu, non_blocking=True)
+                    targets = inputs
                 if len(batch) == 2:
                     # inputs = torch.LongTensor(batch['input_ids']).cuda(
                     #     self.gpu, non_blocking=True)

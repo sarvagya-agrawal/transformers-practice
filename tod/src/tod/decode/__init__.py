@@ -3,13 +3,10 @@
 @github: MathieuTuli
 @email: tuli.mathieu@gmail.com
 """
-from configargparse import Namespace
+from argparse import Namespace
 
-# from onmt.bin.translate import translate as onmt_translate
+from .decode import main as decode_main
 
 
 def main(args: Namespace) -> None:
-    # if args.framework_choice == 'onmt':
-    #     onmt_translate(args)
-    if args.framework_choice == 'custom':
-        ...
+    decode_main(args)
