@@ -42,7 +42,7 @@ class TrainingAgent:
         if self.args.mpd:
             self.gpu = self.args.rank
             self.device = torch.device('cuda', self.gpu)
-        if isinstance(args.gpu, list):
+        elif isinstance(args.gpu, list):
             self.gpu = args.gpu
             self.device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
         else:
