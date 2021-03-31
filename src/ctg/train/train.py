@@ -150,9 +150,23 @@ class TrainingAgent:
     def save_stats(self) -> None:
         pd.DataFrame(data=self.stats).to_csv(self.output_dir / 'stats.csv')
 
+    @staticmethod
+    def unwrap(model: torch.nn.Module) -> torch.nn.Module:
+        if hasattr(model, "module"):
+            TrainingAgent.unwrap(model)
+        else:
+            return model
+
     def save_checkpoint(self, stamp: str = '') -> None:
-        self.model.save_pretrained(
-            str(self.checkpoint_dir / f'model-check{stamp}'))
+        model_to_save = TrainingAgent.unwrap(self.model)
+        if hasattr(model_to_save, 'save_pretrained'):
+            model_to_save.save_pretrained(
+                str(self.checkpoint_dir / f'model-check{stamp}'))
+        else:
+            torch.save(model_to_save.state_dict(),
+                       str(self.checkpoint_dir / f'model-check{stamp}'))
+        torch.save({'args': self.args},
+                   str(self.checkpoint_dir / f'args{stamp}.json'))
         torch.save(self.optimizer.state_dict(), str(
             self.checkpoint_dir / f'optimizer{stamp}.pt'))
         if self.scheduler is not None:
@@ -199,18 +213,18 @@ class TrainingAgent:
         for step, batch in enumerate(
                 tqdm.tqdm(self.train_loader, desc=f'Epoch {epoch} | Train')):
             if self.gpu is not None:
-                if len(batch) == 1:
+                if 'attention_mask' not in batch.keys():
                     inputs = batch['input_ids'].to(
                         self.device, non_blocking=True)
                     attention_mask = None
                     targets = inputs
-                if len(batch) == 2:
+                elif 'attention_mask' in batch.keys():
                     inputs = batch['input_ids'].to(
                         self.device, non_blocking=True)
                     attention_mask = batch['attention_mask'].to(
                         self.device, non_blocking=True)
                     targets = inputs
-                else:
+                elif 'labels' in batch.keys():
                     inputs = batch['input_ids'].to(
                         self.device, non_blocking=True)
                     attention_mask = batch['attention_mask'].to(
@@ -243,18 +257,18 @@ class TrainingAgent:
         for step, batch in enumerate(
                 tqdm.tqdm(self.val_loader, desc=f'Epoch {epoch} | Validate')):
             if self.gpu is not None:
-                if len(batch) == 1:
+                if 'attention_mask' not in batch.keys():
                     inputs = batch['input_ids'].to(
                         self.device, non_blocking=True)
                     attention_mask = None
                     targets = inputs
-                if len(batch) == 2:
+                elif 'attention_mask' in batch.keys():
                     inputs = batch['input_ids'].to(
                         self.device, non_blocking=True)
                     attention_mask = batch['attention_mask'].to(
                         self.device, non_blocking=True)
                     targets = inputs
-                else:
+                elif 'labels' in batch.keys():
                     inputs = batch['input_ids'].to(
                         self.device, non_blocking=True)
                     attention_mask = batch['attention_mask'].to(

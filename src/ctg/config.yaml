@@ -1,10 +1,10 @@
 # Train parameters
 model: distilgpt2
-pretrained: True
 tokenizer: gpt2
+pretrained: True
 optimizer: AdamW
 scheduler: LinearLambdaLR
-batch-size: 8
+batch-size: 1
 max-length: 512
 max-epochs: 250
 num-trials: 1
@@ -30,4 +30,4 @@ num-workers: 4
 output: _test-output
 checkpoint: _test-checkpoint
 cache-dir: _test-cache
-save-freq: 25
+save-freq: 1
