@@ -5,6 +5,7 @@
 """
 from typing import Dict, Any, List
 from argparse import Namespace
+from copy import deepcopy
 from pathlib import Path
 
 import time
@@ -38,6 +39,9 @@ class TrainingAgent:
         self.stats: Dict[str, Any] = dict()
 
         self.args = args
+        if self.args.mpd:
+            self.gpu = self.args.rank
+            self.device = torch.device('cuda', self.gpu)
         if isinstance(args.gpu, list):
             self.gpu = args.gpu
             self.device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
@@ -277,7 +281,7 @@ def main(args: Namespace) -> None:
     if args.mpd and not args.cpu:
         args.world_size *= ngpus_per_node
         mp.spawn(worker, nprocs=ngpus_per_node,
-                 args=(ngpus_per_node, args))
+                 args=(ngpus_per_node, deepcopy(args)))
     else:
         worker(args.gpu if not args.cpu else None, ngpus_per_node, args)
 
