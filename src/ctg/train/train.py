@@ -10,10 +10,10 @@ from pathlib import Path
 
 import time
 
-
 import torch.multiprocessing as mp
 import torch.distributed as dist
 import pandas as pd
+import numpy as np
 import torch
 import tqdm
 
@@ -184,6 +184,7 @@ class TrainingAgent:
 
     def run_epochs(self, trial: int, epochs: List[int]) -> None:
         # total_steps = len(self.train_loader) * self.config['max_epochs']
+        best_loss = 0
         for epoch in epochs:
             if self.args.distributed:
                 self.train_sampler.set_epoch(epoch)
@@ -200,11 +201,17 @@ class TrainingAgent:
                         f"Val Loss {val_loss}")
             self.stats[epoch] = {
                 'train_loss': train_loss, 'val_loss': val_loss}
-            if epoch % self.args.io.save_freq == 0 and epoch > 0:
+            if (epoch % self.args.io.save_freq == 0 and epoch > 0):
                 if not self.args.mpd or (
                     self.args.mpd and
                         self.args.rank % self.args.ngpus_per_node == 0):
                     self.save_checkpoint(f"-{epoch}")
+            if np.greater(val_loss, best_loss):
+                best_loss = val_loss
+                if not self.args.mpd or (
+                    self.args.mpd and
+                        self.args.rank % self.args.ngpus_per_node == 0):
+                    self.save_checkpoint("-best")
             self.save_stats()
 
     def epoch_iteration(self, trial: int, epoch: int) -> float:
