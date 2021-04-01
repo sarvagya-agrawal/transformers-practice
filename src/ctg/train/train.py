@@ -256,7 +256,6 @@ class TrainingAgent:
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(),
                                                self.args.train.clip_grad)
             self.optimizer.step()
-            break
         return train_loss / (step + 1)
 
     def validate(self, epoch: int) -> float:
@@ -291,7 +290,6 @@ class TrainingAgent:
             if isinstance(self.gpu, list):
                 loss = loss.mean()
             val_loss += loss.item()
-            break
         return val_loss / (step + 1)
 
 
