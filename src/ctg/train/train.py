@@ -145,7 +145,7 @@ class TrainingAgent:
 
     def task_setup(self) -> None:
         if self.args.data.name == 'multiwoz2.1':
-            if self.args.data.task == 'causal':
+            if self.args.data.task == 'clm':
                 self.tokenizer.add_special_tokens(
                     {'bos_token': '<|endoftext|>'})
                 self.tokenizer.add_special_tokens(

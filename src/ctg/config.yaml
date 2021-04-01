@@ -1,6 +1,6 @@
 # Train parameters
-model: bert-base-uncased
-tokenizer: bert-base-uncased
+model: google/reformer-crime-and-punishment   # bert-base-uncased
+tokenizer: google/reformer-crime-and-punishment # bert-base-uncased
 pretrained: True
 optimizer: AdamW
 scheduler: LinearLambdaLR
@@ -22,7 +22,7 @@ train-src: _test-dataset/train.txt
 # train-tgt: /home/mat/github/U-of-T/grad-school/nlp/tod/simpletod/resources/gpt2/train.history_belief
 val-src: _test-dataset/val.txt
 # val-tgt: /home/mat/github/U-of-T/grad-school/nlp/tod/simpletod/resources/gpt2/val.history_belief
-task: causal
+task: clm
 overwrite_cache: True
 num-workers: 4
 

@@ -6,15 +6,17 @@
 from pathlib import Path
 
 # BertTokenizer, OpenAIGPTTokenizer, GPT2Tokenizer, AlbertTokenizer
-from transformers import AutoTokenizer, DistilBertForMaskedLM, BertConfig
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
-from transformers import GPT2Config, GPT2LMHeadModel, BertLMHeadModel
+from transformers import (
+    GPT2Config, GPT2LMHeadModel, BertLMHeadModel,
+    AutoTokenizer, BertConfig
+)
 
 import torch
 
 TOKENIZERS = set(['bert-base-uncased', 'openai-gpt',
-                  'gpt2', 'bert-base-uncased'])
-MODELS = set(['gpt2', 'distilgpt2', 'bert-base-uncased'])
+                  'gpt2', 'bert-base-uncased', ])
+MODELS = set(['gpt2', 'distilgpt2', 'bert-base-uncased', ])
 
 
 def get_tokenizer(tokenizer_name: str,
