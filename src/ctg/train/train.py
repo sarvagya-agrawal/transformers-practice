@@ -62,6 +62,8 @@ class TrainingAgent:
                                              self.args.ngpus_per_node)
 
         logger.info(f"Grabbing tokenizer: {self.args.train.tokenizer}")
+        if self.args.rank not in set([-1, 0]):
+            dist.barrer()
         self.tokenizer = get_tokenizer(self.args.train.tokenizer,
                                        self.args.io.cache_dir)
         self.task_setup()
@@ -91,13 +93,19 @@ class TrainingAgent:
             overwrite_cache=self.args.data.overwrite_cache,
             split='val',
             distributed=self.args.distributed)
+        if self.args.rank == 0:
+            dist.barrer()
 
     def reset(self) -> None:
         logger.info("Starting trial reset...")
         logger.info("Loading model...")
+        if self.args.rank not in set([-1, 0]):
+            dist.barrer()
         self.model = get_model(self.args.train.model,
                                cache_dir=self.args.io.cache_dir,
                                pretrained=self.args.train.pretrained)
+        if self.args.rank == 0:
+            dist.barrer()
         # self.model.to(self.device)
         if self.args.distributed:
             if self.gpu is not None:
