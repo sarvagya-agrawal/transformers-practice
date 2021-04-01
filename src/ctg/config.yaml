@@ -1,6 +1,6 @@
 # Train parameters
-model: distilgpt2  # bert-base-uncased
-tokenizer: gpt2  # bert-base-uncased
+model: bert-base-uncased
+tokenizer: bert-base-uncased
 pretrained: True
 optimizer: AdamW
 scheduler: LinearLambdaLR

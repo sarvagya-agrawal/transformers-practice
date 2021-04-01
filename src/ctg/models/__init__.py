@@ -8,7 +8,7 @@ from pathlib import Path
 # BertTokenizer, OpenAIGPTTokenizer, GPT2Tokenizer, AlbertTokenizer
 from transformers import AutoTokenizer, DistilBertForMaskedLM, BertConfig
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
-from transformers import GPT2Config, GPT2LMHeadModel, AutoModelForCausalLM
+from transformers import GPT2Config, GPT2LMHeadModel, BertLMHeadModel
 
 import torch
 
@@ -49,7 +49,7 @@ def get_model(model_name: str,
         _model = GPT2LMHeadModel
         _config = GPT2Config
     elif model_name == 'bert-base-uncased':
-        _model = AutoModelForCausalLM
+        _model = BertLMHeadModel
         _config = BertConfig
     if pretrained:
         if _config is not None:
