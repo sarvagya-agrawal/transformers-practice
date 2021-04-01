@@ -5,34 +5,38 @@
 """
 from pathlib import Path
 
-from transformers import BertTokenizer, OpenAIGPTTokenizer, GPT2Tokenizer, AlbertTokenizer
+# BertTokenizer, OpenAIGPTTokenizer, GPT2Tokenizer, AlbertTokenizer
+from transformers import AutoTokenizer, DistilBertForMaskedLM, BertConfig
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
-from transformers import GPT2Config, GPT2LMHeadModel, AutoModelForMaskedLM
+from transformers import GPT2Config, GPT2LMHeadModel, AutoModelForCausalLM
 
 import torch
 
-TOKENIZERS = ['bert-base-uncased', 'openai-gpt', 'gpt2', 'albert-base-v2']
-MODELS = ['gpt2', 'distilgpt2', 'albert-base-v2']
+TOKENIZERS = set(['bert-base-uncased', 'openai-gpt',
+                  'gpt2', 'bert-base-uncased'])
+MODELS = set(['gpt2', 'distilgpt2', 'bert-base-uncased'])
 
 
 def get_tokenizer(tokenizer_name: str,
                   cache_dir: Path,
                   lower_case: bool = True) -> PreTrainedTokenizerBase:
-    if tokenizer_name == 'bert-base-uncased':
-        tokenizer = BertTokenizer.from_pretrained(
-            tokenizer_name, cache_dir=cache_dir)
-    elif tokenizer_name == 'openai-gpt':
-        tokenizer = OpenAIGPTTokenizer.from_pretrained(
-            tokenizer_name, cache_dir=cache_dir)
-    elif tokenizer_name == 'gpt2':
-        tokenizer = GPT2Tokenizer.from_pretrained(
-            tokenizer_name, cache_dir=cache_dir)
-    elif tokenizer_name == 'albert-base-v2':
-        tokenizer = AlbertTokenizer.from_pretrained(
-            tokenizer_name, cache_dir=cache_dir)
+    # if tokenizer_name == 'bert-base-uncased':
+    #     tokenizer = BertTokenizer.from_pretrained(
+    #         tokenizer_name, cache_dir=cache_dir)
+    # elif tokenizer_name == 'openai-gpt':
+    #     tokenizer = OpenAIGPTTokenizer.from_pretrained(
+    #         tokenizer_name, cache_dir=cache_dir)
+    # elif tokenizer_name == 'gpt2':
+    #     tokenizer = GPT2Tokenizer.from_pretrained(
+    #         tokenizer_name, cache_dir=cache_dir)
+    # elif tokenizer_name == 'albert-base-v2':
+    #     tokenizer = AlbertTokenizer.from_pretrained(
+    #         tokenizer_name, cache_dir=cache_dir)
+    if tokenizer_name in TOKENIZERS:
+        return AutoTokenizer.from_pretrained(tokenizer_name,
+                                             cache_dir=cache_dir)
     else:
         raise ValueError(f'Unknown tokenizer. Must be one of {TOKENIZERS}')
-    return tokenizer
 
 
 def get_model(model_name: str,
@@ -44,9 +48,9 @@ def get_model(model_name: str,
     elif model_name == 'distilgpt2':
         _model = GPT2LMHeadModel
         _config = GPT2Config
-    elif model_name == 'albert-base-v2':
-        _model = AutoModelForMaskedLM
-        _config = None
+    elif model_name == 'bert-base-uncased':
+        _model = AutoModelForCausalLM
+        _config = BertConfig
     if pretrained:
         if _config is not None:
             model = _model.from_pretrained(

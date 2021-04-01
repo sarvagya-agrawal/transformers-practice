@@ -143,7 +143,7 @@ class TrainingAgent:
                 self.tokenizer.add_special_tokens(
                     {'eos_token': '<|endoftext|>'})
             if self.tokenizer._pad_token is None:
-                # tokenizer.add_special_tokens(
+                # self.tokenizer.add_special_tokens(
                 #     {'pad_token': '[PAD]'})
                 self.tokenizer.pad_token = 0.
 
@@ -153,7 +153,7 @@ class TrainingAgent:
     @staticmethod
     def unwrap(model: torch.nn.Module) -> torch.nn.Module:
         if hasattr(model, "module"):
-            TrainingAgent.unwrap(model)
+            return TrainingAgent.unwrap(model.module)
         else:
             return model
 
@@ -256,6 +256,7 @@ class TrainingAgent:
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(),
                                                self.args.train.clip_grad)
             self.optimizer.step()
+            break
         return train_loss / (step + 1)
 
     def validate(self, epoch: int) -> float:
@@ -290,6 +291,7 @@ class TrainingAgent:
             if isinstance(self.gpu, list):
                 loss = loss.mean()
             val_loss += loss.item()
+            break
         return val_loss / (step + 1)
 
 
