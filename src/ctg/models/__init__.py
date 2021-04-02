@@ -14,6 +14,8 @@ from transformers import (
 
 import torch
 
+from .configs import CONFIG_DICTS
+
 TOKENIZERS = set(['bert-base-uncased', 'openai-gpt',
                   'gpt2', 'bert-base-uncased', ])
 MODELS = set(['gpt2', 'distilgpt2', 'bert-base-uncased', ])
@@ -65,5 +67,5 @@ def get_model(model_name: str,
                 cache_dir=cache_dir)
     else:
         model = _model(
-            config=_config())
+            config=_config(**CONFIG_DICTS[model_name]))
     return model
