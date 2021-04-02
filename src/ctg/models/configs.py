@@ -4,7 +4,7 @@
 @email: tuli.mathieu@gmail.com
 """
 CONFIG_DICTS = {
-    'distlgpt2': {
+    'distilgpt2': {
         "_name_or_path": "distilgpt2",
         "_num_labels": 1,
         "activation_function": "gelu_new",
