@@ -1,7 +1,7 @@
 # Train parameters
-model: google/reformer-crime-and-punishment   # bert-base-uncased
-tokenizer: google/reformer-crime-and-punishment # bert-base-uncased
-pretrained: True
+model: distilgpt2
+tokenizer: gpt2
+pretrained: False
 optimizer: AdamW
 scheduler: LinearLambdaLR
 batch-size: 1

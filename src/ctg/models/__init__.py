@@ -65,5 +65,5 @@ def get_model(model_name: str,
                 cache_dir=cache_dir)
     else:
         model = _model(
-            config=_config(model_name))
+            config=_config())
     return model
