@@ -37,6 +37,8 @@ class TrainingAgent:
         self.output_filename: Path = None
         self.checkpoint = None
         self.stats: Dict[str, Any] = dict()
+        self.epoch = 0
+        self.trial = 0
 
         self.args = args
         if self.args.mpd:
@@ -101,9 +103,20 @@ class TrainingAgent:
         logger.info("Loading model...")
         # if self.args.rank not in set([-1, 0]):
         #     dist.barrier()
-        self.model = get_model(self.args.train.model,
-                               cache_dir=self.args.io.cache_dir,
-                               pretrained=self.args.train.pretrained)
+        if self.args.io.resume is not None:
+            self.load_checkpoint(Path(self.args.io.resume))
+        else:
+            self.model = get_model(self.args.train.model,
+                                   cache_dir=self.args.io.cache_dir,
+                                   pretrained=self.args.train.pretrained)
+            self.optimizer, self.scheduler = get_optimizer_scheduler(
+                optim_method=self.args.train.optimizer,
+                scheduler_method=self.args.train.scheduler,
+                net_parameters=self.model.parameters(),
+                max_epochs=self.args.train.max_epochs,
+                train_loader_len=len(self.train_loader),
+                optimizer_kwargs=self.args.train.optimizer_kwargs,
+                scheduler_kwargs=self.args.train.scheduler_kwargs)
         # if self.args.rank == 0:
         #     dist.barrier()
         # self.model.to(self.device)
@@ -129,15 +142,6 @@ class TrainingAgent:
         logger.info(
             "Grabbing optimizer and scheduler: " +
             f"{self.args.train.optimizer} - {self.args.train.scheduler}")
-        self.optimizer, self.scheduler = get_optimizer_scheduler(
-            optim_method=self.args.train.optimizer,
-            scheduler_method=self.args.train.scheduler,
-            net_parameters=self.model.parameters(),
-            max_epochs=self.args.train.max_epochs,
-            train_loader_len=len(self.train_loader),
-            optimizer_kwargs=self.args.train.optimizer_kwargs,
-            scheduler_kwargs=self.args.train.scheduler_kwargs)
-
         # self.loss = torch.nn.CrossEntropyLos() if self.args.train.loss ==\
         #     'cross_entropy' else None
         # self.loss.to(self.device)
@@ -165,30 +169,71 @@ class TrainingAgent:
         else:
             return model
 
-    def save_checkpoint(self, stamp: str = '') -> None:
+    def load_checkpoint(self, path: Path) -> None:
+        print(path.exists())
+        if not path.exists():
+            logger.warning("Unknown resume. Starting from scratch.")
+            self.args.io.resume = None
+            self.reset()
+            return
+        train_state = torch.load(str(path / 'train_state.pt'))
+        # train_state['args'].io.resume = self.args.io.resume
+        # if self.args != train_state['args']:
+        #     raise ValueError("Checkpoint args and config args don't match")
+        self.model = get_model(
+            self.args.train.model,
+            cache_dir=self.args.io.cache_dir,
+            pretrained=True,
+            weights=str(path))
+        self.optimizer, self.scheduler = get_optimizer_scheduler(
+            optim_method=self.args.train.optimizer,
+            scheduler_method=self.args.train.scheduler,
+            net_parameters=self.model.parameters(),
+            max_epochs=self.args.train.max_epochs,
+            train_loader_len=len(self.train_loader),
+            optimizer_kwargs=self.args.train.optimizer_kwargs,
+            scheduler_kwargs=self.args.train.scheduler_kwargs)
+        self.optimizer.load_state_dict(train_state['optimizer'])
+        self.scheduler.load_state_dict(train_state['scheduler'])
+        self.epoch = train_state['epoch']
+        self.trial = train_state['trial']
+        self.args.io.resume = None
+
+    def save_checkpoint(self, trial: int, epoch: int, stamp: str) -> None:
         model_to_save = TrainingAgent.unwrap(self.model)
         if hasattr(model_to_save, 'save_pretrained'):
             model_to_save.save_pretrained(
-                str(self.checkpoint_dir / f'model-check{stamp}'))
+                str(self.checkpoint_dir / stamp))
         else:
             torch.save(model_to_save.state_dict(),
-                       str(self.checkpoint_dir / f'model-check{stamp}'))
-        torch.save({'args': self.args},
-                   str(self.checkpoint_dir / f'args{stamp}.json'))
-        torch.save(self.optimizer.state_dict(), str(
-            self.checkpoint_dir / f'optimizer{stamp}.pt'))
-        if self.scheduler is not None:
-            torch.save(self.optimizer.state_dict(), str(
-                self.checkpoint_dir / f'scheduler{stamp}.pt'))
+                       str(self.checkpoint_dir / stamp))
+        torch.save({
+            'args': self.args,
+            'epoch': epoch,
+            'trial': trial,
+            'optimizer': self.optimizer.state_dict(),
+            'scheduler': self.scheduler.state_dict(), },
+            str(self.checkpoint_dir / stamp / 'train_state.pt'))
+        # torch.save(self.optimizer.state_dict(), str(
+        #     self.checkpoint_dir / folder / 'optimizer.pt'))
+        # if self.scheduler is not None:
+        #     torch.save(self.optimizer.state_dict(), str(
+        #         self.checkpoint_dir / folder / 'scheduler.pt'))
 
     def train(self) -> None:
         for trial in range(self.args.train.num_trials):
             self.reset()
-            self.run_epochs(trial, range(0, self.args.train.max_epochs))
-        if not self.args.mpd or (
-            self.args.mpd and
-                self.args.rank % self.args.ngpus_per_node == 0):
-            self.save_checkpoint(stamp='-final')
+            if trial == self.args.train.num_trials - self.trial:
+                break
+            self.run_epochs(trial + self.trial, range(
+                self.epoch, self.args.train.max_epochs))
+            self.epoch = 0
+            if not self.args.mpd or (
+                self.args.mpd and
+                    self.args.rank % self.args.ngpus_per_node == 0):
+                self.save_checkpoint(trial=trial,
+                                     epoch=self.args.train.max_epochs - 1,
+                                     stamp=f'final-{trial}')
 
     def run_epochs(self, trial: int, epochs: List[int]) -> None:
         # total_steps = len(self.train_loader) * self.config['max_epochs']
@@ -199,11 +244,12 @@ class TrainingAgent:
             start_time = time.time()
             train_loss = self.epoch_iteration(trial, epoch)
             epoch_time = time.time()
-            val_loss = self.validate(epoch)
+            val_loss = self.validate(trial, epoch)
             if self.scheduler is not None:
                 self.scheduler.step()
             end_time = time.time()
-            logger.info(f"E time: {epoch_time - start_time} | "
+            logger.info(f"T {trial} | E {epoch} | " +
+                        f"E time: {epoch_time - start_time} | " +
                         f"T time {end_time - epoch_time} | " +
                         f"Train Loss {train_loss} | " +
                         f"Val Loss {val_loss}")
@@ -213,20 +259,27 @@ class TrainingAgent:
                 if not self.args.mpd or (
                     self.args.mpd and
                         self.args.rank % self.args.ngpus_per_node == 0):
-                    self.save_checkpoint(f"-{epoch}")
+                    self.save_checkpoint(trial=trial,
+                                         epoch=epoch,
+                                         # stamp=f"-t{trial}-e{epoch}")
+                                         stamp="latest")
             if np.greater(val_loss, best_loss):
                 best_loss = val_loss
                 if not self.args.mpd or (
                     self.args.mpd and
                         self.args.rank % self.args.ngpus_per_node == 0):
-                    self.save_checkpoint("-best")
+                    self.save_checkpoint(trial=trial,
+                                         epoch=epoch,
+                                         stamp="best")
             self.save_stats()
 
     def epoch_iteration(self, trial: int, epoch: int) -> float:
         self.model.train()
         train_loss = 0
         for step, batch in enumerate(
-                tqdm.tqdm(self.train_loader, desc=f'Epoch {epoch} | Train')):
+                tqdm.tqdm(self.train_loader,
+                          desc=f'Trial {trial} | Epoch {epoch} | Train')):
+            continue
             if self.gpu is not None:
                 if 'attention_mask' not in batch.keys():
                     inputs = batch['input_ids'].to(
@@ -266,11 +319,13 @@ class TrainingAgent:
             self.optimizer.step()
         return train_loss / (step + 1)
 
-    def validate(self, epoch: int) -> float:
+    def validate(self, trial: int, epoch: int) -> float:
         self.model.eval()
         val_loss = 0
         for step, batch in enumerate(
-                tqdm.tqdm(self.val_loader, desc=f'Epoch {epoch} | Validate')):
+                tqdm.tqdm(self.val_loader,
+                          desc=f'Trial {trial} | Epoch {epoch} | Validate')):
+            continue
             if self.gpu is not None:
                 if 'attention_mask' not in batch.keys():
                     inputs = batch['input_ids'].to(

@@ -45,3 +45,4 @@ def train_args(sub_parser: ArgumentParser) -> None:
     io_group.add_argument("--checkpoint", type=str)
     io_group.add_argument("--cache-dir", type=str)
     io_group.add_argument("--save-freq", type=int, default=25)
+    io_group.add_argument("--resume", default=None, type=str)

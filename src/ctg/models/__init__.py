@@ -45,7 +45,8 @@ def get_tokenizer(tokenizer_name: str,
 
 def get_model(model_name: str,
               cache_dir: Path,
-              pretrained: bool = True) -> torch.nn.Module:
+              pretrained: bool = True,
+              weights: str = None) -> torch.nn.Module:
     if model_name == 'gpt2':
         _model = GPT2LMHeadModel
         _config = GPT2Config()
@@ -56,6 +57,7 @@ def get_model(model_name: str,
         _model = BertLMHeadModel
         _config = BertConfig
     if pretrained:
+        model_name = weights if weights is not None else model_name
         if _config is not None:
             model = _model.from_pretrained(
                 model_name,
