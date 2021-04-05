@@ -67,8 +67,9 @@ class TrainingAgent:
         # if self.args.rank not in set([-1, 0]):
         #     dist.barrier()
         self.tokenizer = get_tokenizer(self.args.train.tokenizer,
-                                       self.args.io.cache_dir)
-        self.task_setup()
+                                       self.args.io.cache_dir,
+                                       dataset=self.args.data.name,
+                                       task=self.args.data.task)
         logger.info("Loading train dataset...")
         self.train_loader, self.train_sampler = load_data(
             src_fname=Path(self.args.data.train_src),
@@ -146,18 +147,6 @@ class TrainingAgent:
         #     'cross_entropy' else None
         # self.loss.to(self.device)
         logger.info("Done reset")
-
-    def task_setup(self) -> None:
-        if self.args.data.name == 'multiwoz2.1':
-            if self.args.data.task == 'clm':
-                self.tokenizer.add_special_tokens(
-                    {'bos_token': '<|endoftext|>'})
-                self.tokenizer.add_special_tokens(
-                    {'eos_token': '<|endoftext|>'})
-            if self.tokenizer._pad_token is None:
-                # self.tokenizer.add_special_tokens(
-                #     {'pad_token': '[PAD]'})
-                self.tokenizer.pad_token = 0.
 
     def save_stats(self) -> None:
         pd.DataFrame(data=self.stats).to_csv(self.output_dir / 'stats.csv')
@@ -279,7 +268,6 @@ class TrainingAgent:
         for step, batch in enumerate(
                 tqdm.tqdm(self.train_loader,
                           desc=f'Trial {trial} | Epoch {epoch} | Train')):
-            continue
             if self.gpu is not None:
                 if 'attention_mask' not in batch.keys():
                     inputs = batch['input_ids'].to(
@@ -325,7 +313,6 @@ class TrainingAgent:
         for step, batch in enumerate(
                 tqdm.tqdm(self.val_loader,
                           desc=f'Trial {trial} | Epoch {epoch} | Validate')):
-            continue
             if self.gpu is not None:
                 if 'attention_mask' not in batch.keys():
                     inputs = batch['input_ids'].to(

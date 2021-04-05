@@ -23,6 +23,8 @@ MODELS = set(['gpt2', 'distilgpt2', 'bert-base-uncased', ])
 
 def get_tokenizer(tokenizer_name: str,
                   cache_dir: Path,
+                  dataset: str,
+                  task: str,
                   lower_case: bool = True) -> PreTrainedTokenizerBase:
     # if tokenizer_name == 'bert-base-uncased':
     #     tokenizer = BertTokenizer.from_pretrained(
@@ -37,10 +39,21 @@ def get_tokenizer(tokenizer_name: str,
     #     tokenizer = AlbertTokenizer.from_pretrained(
     #         tokenizer_name, cache_dir=cache_dir)
     if tokenizer_name in TOKENIZERS:
-        return AutoTokenizer.from_pretrained(tokenizer_name,
-                                             cache_dir=cache_dir)
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_name,
+                                                  cache_dir=cache_dir)
     else:
         raise ValueError(f'Unknown tokenizer. Must be one of {TOKENIZERS}')
+    if dataset == 'multiwoz2.1':
+        if task == 'clm':
+            tokenizer.add_special_tokens(
+                {'bos_token': '<|endoftext|>'})
+            tokenizer.add_special_tokens(
+                {'eos_token': '<|endoftext|>'})
+        if tokenizer._pad_token is None:
+            # self.tokenizer.add_special_tokens(
+            #     {'pad_token': '[PAD]'})
+            tokenizer.pad_token = 0.
+    return tokenizer
 
 
 def get_model(model_name: str,
