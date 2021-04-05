@@ -15,6 +15,9 @@ from .utils.logging import LogLevel
 from .train.args import train_args as _train_args
 
 
+# def split_args(groups: _ArgumentGroup,
+#                group_titles: List[str],
+#                args: Namespace) -> Namespace:
 def split_args(groups: _ArgumentGroup,
                group_titles: List[str],
                args: Namespace) -> Namespace:
@@ -31,6 +34,11 @@ def split_args(groups: _ArgumentGroup,
             for k, v in other_args.items():
                 split_args.__dict__[k] = v
     return split_args
+# def split_args(groups: List[_ArgumentGroup], args: Namespace) -> Namespace:
+#     for group in groups:
+#         group_dict = {a.dest: getattr(args, a.dest, None)
+#                       for a in group._group_actions}
+#         args[group.title] = Namespace(**group_dict)
 
 
 def general_args(parent_parser: ArgumentParser,
