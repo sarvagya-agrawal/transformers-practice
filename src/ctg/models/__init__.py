@@ -9,7 +9,8 @@ from pathlib import Path
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from transformers import (
     GPT2Config, GPT2LMHeadModel, BertLMHeadModel,
-    AutoTokenizer, BertConfig
+    AutoTokenizer, BertConfig,
+    AutoModelForSeq2SeqLM
 )
 
 import torch
@@ -17,8 +18,9 @@ import torch
 from .configs import CONFIG_DICTS
 
 TOKENIZERS = set(['bert-base-uncased', 'openai-gpt',
-                  'gpt2', 'bert-base-uncased', ])
-MODELS = set(['gpt2', 'distilgpt2', 'bert-base-uncased', ])
+                  'gpt2', 'bert-base-uncased', 't5-small'])
+MODELS = set(['gpt2', 'distilgpt2', 'bert-base-uncased', 't5-small'])
+SEQ2SEQ_MODELS = set(['t5-small'])
 
 
 def get_tokenizer(tokenizer_name: str,
@@ -49,18 +51,22 @@ def get_tokenizer(tokenizer_name: str,
                 {'bos_token': '<|endoftext|>'})
             tokenizer.add_special_tokens(
                 {'eos_token': '<|endoftext|>'})
-        if tokenizer._pad_token is None:
-            # self.tokenizer.add_special_tokens(
-            #     {'pad_token': '[PAD]'})
-            tokenizer.pad_token = 0.
+    if tokenizer._pad_token is None:
+        tokenizer.add_special_tokens(
+            {'pad_token': '[PAD]'})
+        # tokenizer.pad_token = 0.
     return tokenizer
 
 
 def get_model(model_name: str,
               cache_dir: Path,
               pretrained: bool = True,
-              weights: str = None) -> torch.nn.Module:
-    if model_name == 'gpt2':
+              weights: str = None,
+              task: str = 'clm') -> torch.nn.Module:
+    if task == 'nmt' and model_name in SEQ2SEQ_MODELS:
+        _model = AutoModelForSeq2SeqLM
+        _config = None
+    elif model_name == 'gpt2':
         _model = GPT2LMHeadModel
         _config = GPT2Config()
     elif model_name == 'distilgpt2':
@@ -83,4 +89,7 @@ def get_model(model_name: str,
     else:
         model = _model(
             config=_config(**CONFIG_DICTS[model_name]))
+    # if task == 'nmt' and model.config.decoder_state_token_id is None:
+    #     raise ValueError(
+    #         "Make sure that `decoder_start_token_id` is correctly defined")
     return model

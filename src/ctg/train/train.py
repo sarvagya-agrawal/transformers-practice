@@ -73,8 +73,6 @@ class TrainingAgent:
         logger.info("Loading train dataset...")
         self.train_loader, self.train_sampler = load_data(
             src_fname=Path(self.args.data.train_src),
-            tgt_fname=Path(self.args.data.train_tgt) if self.args.data.val_tgt
-            is not None else None,
             tokenizer=self.tokenizer,
             cache_dir=self.args.io.cache_dir,
             max_length=self.args.train.max_length,
@@ -86,8 +84,6 @@ class TrainingAgent:
         logger.info("Loading validation dataset...")
         self.val_loader, self.val_sampler = load_data(
             src_fname=Path(self.args.data.val_src),
-            tgt_fname=Path(self.args.data.val_tgt) if self.args.data.val_tgt
-            is not None else None,
             tokenizer=self.tokenizer,
             cache_dir=self.args.io.cache_dir,
             max_length=self.args.train.max_length,
@@ -109,7 +105,8 @@ class TrainingAgent:
         else:
             self.model = get_model(self.args.train.model,
                                    cache_dir=self.args.io.cache_dir,
-                                   pretrained=self.args.train.pretrained)
+                                   pretrained=self.args.train.pretrained,
+                                   task=self.args.data.task)
             self.optimizer, self.scheduler = get_optimizer_scheduler(
                 optim_method=self.args.train.optimizer,
                 scheduler_method=self.args.train.scheduler,
@@ -173,7 +170,8 @@ class TrainingAgent:
             self.args.train.model,
             cache_dir=self.args.io.cache_dir,
             pretrained=True,
-            weights=str(path))
+            weights=str(path),
+            task=self.args.data.task)
         self.optimizer, self.scheduler = get_optimizer_scheduler(
             optim_method=self.args.train.optimizer,
             scheduler_method=self.args.train.scheduler,
@@ -268,25 +266,24 @@ class TrainingAgent:
         for step, batch in enumerate(
                 tqdm.tqdm(self.train_loader,
                           desc=f'Trial {trial} | Epoch {epoch} | Train')):
-            if self.gpu is not None:
-                if 'attention_mask' not in batch.keys():
-                    inputs = batch['input_ids'].to(
-                        self.device, non_blocking=True)
-                    attention_mask = None
-                    targets = inputs
-                elif 'attention_mask' in batch.keys():
-                    inputs = batch['input_ids'].to(
-                        self.device, non_blocking=True)
-                    attention_mask = batch['attention_mask'].to(
-                        self.device, non_blocking=True)
-                    targets = inputs
-                elif 'labels' in batch.keys():
-                    inputs = batch['input_ids'].to(
-                        self.device, non_blocking=True)
-                    attention_mask = batch['attention_mask'].to(
-                        self.device, non_blocking=True)
-                    targets = batch['labels'].to(
-                        self.device, non_blocking=True)
+            if 'attention_mask' not in batch.keys():
+                inputs = batch['input_ids'].to(
+                    self.device, non_blocking=True)
+                attention_mask = None
+                targets = inputs
+            elif 'attention_mask' in batch.keys():
+                inputs = batch['input_ids'].to(
+                    self.device, non_blocking=True)
+                attention_mask = batch['attention_mask'].to(
+                    self.device, non_blocking=True)
+                targets = inputs
+            elif 'labels' in batch.keys():
+                inputs = batch['input_ids'].to(
+                    self.device, non_blocking=True)
+                attention_mask = batch['attention_mask'].to(
+                    self.device, non_blocking=True)
+                targets = batch['labels'].to(
+                    self.device, non_blocking=True)
             self.optimizer.zero_grad()
             outputs = self.model(
                 inputs,
@@ -313,25 +310,24 @@ class TrainingAgent:
         for step, batch in enumerate(
                 tqdm.tqdm(self.val_loader,
                           desc=f'Trial {trial} | Epoch {epoch} | Validate')):
-            if self.gpu is not None:
-                if 'attention_mask' not in batch.keys():
-                    inputs = batch['input_ids'].to(
-                        self.device, non_blocking=True)
-                    attention_mask = None
-                    targets = inputs
-                elif 'attention_mask' in batch.keys():
-                    inputs = batch['input_ids'].to(
-                        self.device, non_blocking=True)
-                    attention_mask = batch['attention_mask'].to(
-                        self.device, non_blocking=True)
-                    targets = inputs
-                elif 'labels' in batch.keys():
-                    inputs = batch['input_ids'].to(
-                        self.device, non_blocking=True)
-                    attention_mask = batch['attention_mask'].to(
-                        self.device, non_blocking=True)
-                    targets = batch['labels'].to(
-                        self.device, non_blocking=True)
+            if 'attention_mask' not in batch.keys():
+                inputs = batch['input_ids'].to(
+                    self.device, non_blocking=True)
+                attention_mask = None
+                targets = inputs
+            elif 'attention_mask' in batch.keys():
+                inputs = batch['input_ids'].to(
+                    self.device, non_blocking=True)
+                attention_mask = batch['attention_mask'].to(
+                    self.device, non_blocking=True)
+                targets = inputs
+            elif 'labels' in batch.keys():
+                inputs = batch['input_ids'].to(
+                    self.device, non_blocking=True)
+                attention_mask = batch['attention_mask'].to(
+                    self.device, non_blocking=True)
+                targets = batch['labels'].to(
+                    self.device, non_blocking=True)
             with torch.no_grad():
                 outputs = self.model(
                     inputs, attention_mask=attention_mask, labels=targets)

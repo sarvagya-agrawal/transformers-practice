@@ -1,13 +1,13 @@
 # Train parameters
-model: distilgpt2
-tokenizer: gpt2
-pretrained: False
+model: t5-small
+tokenizer: t5-small
+pretrained: True
 optimizer: AdamW
 scheduler: LinearLambdaLR
 batch-size: 1
 max-length: 512
-max-epochs: 10
-num-trials: 2
+max-epochs: 100
+num-trials: 1
 loss: cross_entropy
 clip-grad: 1.0
 optimizer-kwargs:
@@ -17,12 +17,10 @@ scheduler-kwargs:
 mask: False
 
 # Data Parameters
-name: multiwoz2.1
-train-src: _test-dataset/train.txt
-# train-tgt: /home/mat/github/U-of-T/grad-school/nlp/tod/simpletod/resources/gpt2/train.history_belief
-val-src: _test-dataset/val.txt
-# val-tgt: /home/mat/github/U-of-T/grad-school/nlp/tod/simpletod/resources/gpt2/val.history_belief
-task: clm
+name: smcalflow
+train-src: _test-dataset/train.json
+val-src: _test-dataset/valid.json
+task: nmt
 overwrite_cache: True
 num-workers: 4
 
@@ -30,4 +28,4 @@ num-workers: 4
 output: _test-output
 checkpoint: _test-checkpoint
 cache-dir: _test-cache
-save-freq: 1
+save-freq: 25

@@ -50,37 +50,44 @@ def load_data(src_fname: PosixPath,
               max_length: int,
               batch_size: int,
               cache_dir: PosixPath,
-              tgt_fname: PosixPath = None,
               overwrite_cache: bool = False,
               num_workers: int = 4,
               split: str = 'train',
               distributed: bool = False) -> None:
-    if src_fname.suffix not in set(['.txt']) or not src_fname.exists():
+    if src_fname.suffix not in set(['.json']) or not src_fname.exists():
         raise ValueError(f"Unknown src file {src_fname}. Files must be",
-                         "line-by-line .txt files")
-    if tgt_fname is not None and (tgt_fname.suffix not in set(['.txt']) or
-                                  not tgt_fname.exists()):
-        raise ValueError(f"Unknown tgt file {tgt_fname}. Files must be",
-                         "line-by-line .txt files")
-    if tgt_fname is not None:
-        pass
-    else:
-        dataset = load_dataset('text',
-                               data_files={split: str(src_fname)},
-                               cache_dir=cache_dir, split=split)
-        # dataset = LineByLineTextDataset(tokenizer, file_path=str(src_fname),
-        #                                 max_length=max_length)
+                         " .json files")
+    dataset = load_dataset('json',
+                           data_files={split: str(src_fname)},
+                           field='data',
+                           cache_dir=cache_dir,
+                           split=split)
+    # dataset = LineByLineTextDataset(tokenizer, file_path=str(src_fname),
+    #                                 max_length=max_length)
 
     def tokenize(examples: List[str]) -> Tuple[List[int], None]:
-        examples["text"] = [line for line in examples["text"] if len(line) > 0
-                            and not line.isspace()]
-        return tokenizer(
-            examples['text'],
+        inputs = examples["source"]
+        inputs = tokenizer(
+            inputs,
             add_special_tokens=True,
             padding='max_length',
             max_length=max_length,
             return_tensors='np',
             truncation=True)
+        if "targets" in examples.keys():
+            targets = examples["targets"]
+            with tokenizer.as_target_tokenizer():
+                targets = tokenizer(targets,
+                                    add_special_tokens=True,
+                                    padding='max_length',
+                                    max_length=max_length,
+                                    return_tensors='np',
+                                    truncation=True)
+                targets["input_ids"] = [
+                    [(_label if _label != tokenizer.pad_token_id else -1e6)
+                        for _label in label] for label in targets["input_ids"]]
+            inputs["labels"] = targets["input_ids"]
+        return inputs
 
     def collate(examples):
         return pad_sequence(
@@ -90,7 +97,7 @@ def load_data(src_fname: PosixPath,
     dataset = dataset.map(
         tokenize,
         batched=True,
-        remove_columns=['text'],
+        remove_columns=dataset.column_names,
         num_proc=num_workers,
         # batch_size=batch_size,
         load_from_cache_file=not overwrite_cache
