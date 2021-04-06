@@ -111,8 +111,8 @@ def load_data(src_fname: PosixPath,
         sampler = RandomSampler(dataset) if split == 'train'\
             else SequentialSampler(dataset)
     else:
-        sampler = torch.utils.data.distributed.DistributedSampler(dataset) if \
-            split == 'train' else SequentialSampler(dataset)
+        sampler = torch.utils.data.distributed.DistributedSampler(
+            dataset, shuffle=split == 'train')
     return DataLoader(
         dataset,
         sampler=sampler,
