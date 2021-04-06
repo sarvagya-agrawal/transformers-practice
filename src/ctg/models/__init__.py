@@ -10,7 +10,8 @@ from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from transformers import (
     GPT2Config, GPT2LMHeadModel, BertLMHeadModel,
     AutoTokenizer, BertConfig,
-    AutoModelForSeq2SeqLM
+    AutoModelForSeq2SeqLM,
+    T5ForConditionalGeneration
 )
 
 import torch
@@ -19,7 +20,8 @@ from .configs import CONFIG_DICTS
 
 TOKENIZERS = set(['bert-base-uncased', 'openai-gpt',
                   'gpt2', 'bert-base-uncased', 't5-small'])
-MODELS = set(['gpt2', 'distilgpt2', 'bert-base-uncased', 't5-small'])
+MODELS = set(
+    ['gpt2', 'distilgpt2', 'bert-base-uncased', 't5-small', '**/best'])
 SEQ2SEQ_MODELS = set(['t5-small'])
 
 
@@ -75,6 +77,9 @@ def get_model(model_name: str,
     elif model_name == 'bert-base-uncased':
         _model = BertLMHeadModel
         _config = BertConfig
+    elif model_name == 't5-small':
+        _model = T5ForConditionalGeneration
+        _config = None
     if pretrained:
         model_name = weights if weights is not None else model_name
         if _config is not None:

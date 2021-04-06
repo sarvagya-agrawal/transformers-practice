@@ -9,10 +9,11 @@ from typing import List
 from argparse import ArgumentParser, Namespace
 
 
-from .data.args import prep_smcalflow_args  # , build_vocab_args
-from .test.args import test_smcalflow_args
-from .utils.logging import LogLevel
+from .decode.args import decode_args as _decode_args
 from .train.args import train_args as _train_args
+from .test.args import test_smcalflow_args
+from .data.args import prep_smcalflow_args  # , build_vocab_args
+from .utils.logging import LogLevel
 
 
 # def split_args(groups: _ArgumentGroup,
@@ -89,11 +90,15 @@ def train_args(parent_parser: ArgumentParser,
 
 def decode_args(parent_parser: ArgumentParser,
                 sub_parser: ArgumentParser) -> None:
-    group = sub_parser.add_argument_group('Translate')
+    # group = sub_parser.add_argument_group('Train')
+    _decode_args(sub_parser)
     # group.add_argument(
     #     '--framework-choice', default='onmt', choices=['onmt', 'custom'],
     #     type=str, help="Define framework choice.")
-    # translate_opts(sub_parser)
+    # build_vocab_args(sub_parser, build_vocab_only=False)
+    # model_opts(sub_parser)
+    # _add_train_general_opts(sub_parser)
+    # _add_train_dynamic_data(sub_parser)
 
 
 def test_args(parent_parser: ArgumentParser,

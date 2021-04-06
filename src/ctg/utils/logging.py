@@ -8,7 +8,9 @@ from datetime import datetime
 from pathlib import Path
 from enum import Enum
 
+import multiprocessing
 import logging
+import time
 
 logger = logging.getLogger()
 
@@ -32,9 +34,31 @@ class LogLevel(Enum):
         return list(map(lambda c: c, LogLevel))
 
 
+def listener_process(log_file: Path,
+                     log_q,
+                     log_level: LogLevel = LogLevel.NOTSET,
+                     rotate: bool = False) -> None:
+    logger = init_logger(log_file, log_level, rotate)
+    while True:
+        while not log_q.empty():
+            record = log_q.get()
+            logger.handle(record)
+        time.sleep(1)
+
+
+def mp_logger(log_file: Path,
+              log_level: LogLevel = LogLevel.NOTSET,
+              rotate: bool = False) -> None:
+    log_q = multiprocessing.Queue(-1)
+    listener = multiprocessing.Process(
+        target=listener_process, args=(log_file, log_q, log_level, rotate,))
+    listener.start()
+    return log_q
+
+
 def init_logger(log_file: Path,
                 log_level: LogLevel = LogLevel.NOTSET,
-                rotate=False) -> logging.Logger:
+                rotate: bool = False) -> logging.Logger:
     if log_level not in LogLevel.items():
         raise ValueError(f"Unknown log level: {log_level}")
     log_format = logging.Formatter("[%(asctime)s %(levelname)s] %(message)s")

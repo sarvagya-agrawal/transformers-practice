@@ -84,9 +84,9 @@ def load_data(src_fname: PosixPath,
                                     max_length=max_length,
                                     return_tensors='np',
                                     truncation=True)
-                targets["input_ids"] = [
-                    [(_label if _label != tokenizer.pad_token_id else -1e6)
-                        for _label in label] for label in targets["input_ids"]]
+                # targets["input_ids"] = [
+                #     [(_label if _label != tokenizer.pad_token_id else -1e6)
+                #         for _label in label] for label in targets["input_ids"]]
             inputs["labels"] = targets["input_ids"]
         return inputs
 
@@ -95,7 +95,7 @@ def load_data(src_fname: PosixPath,
             np.array(examples), batch_first=True,
             padding_value=tokenizer.pad_token_id if
             tokenizer._pad_token is not None else 0.)
-    if max_length > 0:
+    if max_samples > 0:
         dataset = dataset.select(range(min(max_samples, len(dataset))))
     dataset = dataset.map(
         tokenize,

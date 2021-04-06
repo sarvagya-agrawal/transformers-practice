@@ -69,7 +69,7 @@ if str(args.command) == 'train':
                       args)
     train_main(args)
 elif str(args.command) == 'decode':
-    args = split_args(train_sub_parser._action_groups,
+    args = split_args(decode_sub_parser._action_groups,
                       ['decode', 'data', 'io'],
                       args)
     decode_main(args)

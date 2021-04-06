@@ -8,9 +8,8 @@ from argparse import Namespace
 from copy import deepcopy
 from pathlib import Path
 
+import logging
 import time
-
-from transformers import Seq2SeqTrainer
 
 import torch.multiprocessing as mp
 import torch.distributed as dist
@@ -20,14 +19,16 @@ import torch
 import tqdm
 
 from ..models import get_tokenizer, get_model
+from ..utils.logging import logger, mp_logger
 from ..optim import get_optimizer_scheduler
-from ..utils.logging import logger
 from ..data.utils import load_data
 from ..utils.io import create_dir
 
 
 class TrainingAgent:
-    def __init__(self, args: Namespace,) -> None:
+    def __init__(self, args: Namespace, log_q=None) -> None:
+        if log_q is not None:
+            logger.addHandler(logging.handlers.QueueHandler(log_q))
         self.train_loader = None
         self.train_sampler = None
         self.val_loader = None
@@ -270,7 +271,14 @@ class TrainingAgent:
         for step, batch in enumerate(
                 tqdm.tqdm(self.train_loader,
                           desc=f'Trial {trial} | Epoch {epoch} | Train')):
-            if 'attention_mask' not in batch.keys():
+            if 'labels' in batch.keys():
+                inputs = batch['input_ids'].to(
+                    self.device, non_blocking=True)
+                attention_mask = batch['attention_mask'].to(
+                    self.device, non_blocking=True)
+                targets = batch['labels'].to(
+                    self.device, non_blocking=True)
+            elif 'attention_mask' not in batch.keys():
                 inputs = batch['input_ids'].to(
                     self.device, non_blocking=True)
                 attention_mask = None
@@ -281,13 +289,6 @@ class TrainingAgent:
                 attention_mask = batch['attention_mask'].to(
                     self.device, non_blocking=True)
                 targets = inputs
-            elif 'labels' in batch.keys():
-                inputs = batch['input_ids'].to(
-                    self.device, non_blocking=True)
-                attention_mask = batch['attention_mask'].to(
-                    self.device, non_blocking=True)
-                targets = batch['labels'].to(
-                    self.device, non_blocking=True)
             self.optimizer.zero_grad()
             outputs = self.model(
                 inputs,
@@ -314,7 +315,14 @@ class TrainingAgent:
         for step, batch in enumerate(
                 tqdm.tqdm(self.val_loader,
                           desc=f'Trial {trial} | Epoch {epoch} | Validate')):
-            if 'attention_mask' not in batch.keys():
+            if 'labels' in batch.keys():
+                inputs = batch['input_ids'].to(
+                    self.device, non_blocking=True)
+                attention_mask = batch['attention_mask'].to(
+                    self.device, non_blocking=True)
+                targets = batch['labels'].to(
+                    self.device, non_blocking=True)
+            elif 'attention_mask' not in batch.keys():
                 inputs = batch['input_ids'].to(
                     self.device, non_blocking=True)
                 attention_mask = None
@@ -325,13 +333,6 @@ class TrainingAgent:
                 attention_mask = batch['attention_mask'].to(
                     self.device, non_blocking=True)
                 targets = inputs
-            elif 'labels' in batch.keys():
-                inputs = batch['input_ids'].to(
-                    self.device, non_blocking=True)
-                attention_mask = batch['attention_mask'].to(
-                    self.device, non_blocking=True)
-                targets = batch['labels'].to(
-                    self.device, non_blocking=True)
             with torch.no_grad():
                 outputs = self.model(
                     inputs, attention_mask=attention_mask, labels=targets)
@@ -350,14 +351,15 @@ def main(args: Namespace) -> None:
     logger.info(f"GPU: {args.gpu}")
     logger.info(f"NGPUS: {ngpus_per_node}")
     if args.mpd and not args.cpu:
+        log_q = mp_logger
         args.world_size *= ngpus_per_node
         mp.spawn(worker, nprocs=ngpus_per_node,
-                 args=(ngpus_per_node, deepcopy(args)))
+                 args=(ngpus_per_node, deepcopy(args), log_q))
     else:
-        worker(args.gpu if not args.cpu else None, ngpus_per_node, args)
+        worker(args.gpu if not args.cpu else None, ngpus_per_node, args, None)
 
 
-def worker(gpu: int, ngpus_per_node: int, args: Namespace):
+def worker(gpu: int, ngpus_per_node: int, args: Namespace, log_q):
     args.gpu = gpu
     if args.distributed:
         if args.mpd:
@@ -365,5 +367,5 @@ def worker(gpu: int, ngpus_per_node: int, args: Namespace):
         dist.init_process_group(
             backend=args.dist_backend, init_method=args.dist_url,
             world_size=args.world_size, rank=args.rank)
-    training_agent = TrainingAgent(args=args)
+    training_agent = TrainingAgent(args=args, log_q=log_q)
     training_agent.train()

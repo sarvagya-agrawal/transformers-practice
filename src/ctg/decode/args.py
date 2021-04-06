@@ -14,8 +14,8 @@ from . import DECODE_METHODS
 def decode_args(sub_parser: ArgumentParser) -> None:
     decode_group = sub_parser.add_argument_group('decode')
     decode_group.add_argument("--model", type=str, choices=MODELS)
+    decode_group.add_argument("--weights", type=str)
     decode_group.add_argument("--tokenizer", type=str, choices=TOKENIZERS)
-    decode_group.add_argument("--gpu", nargs="+")
     decode_group.add_argument("--batch-size", type=int)
     decode_group.add_argument("--max-length", type=int)
     decode_group.add_argument("--method", choices=DECODE_METHODS)
@@ -24,6 +24,7 @@ def decode_args(sub_parser: ArgumentParser) -> None:
     decode_group.add_argument("--top-k", default=-1, type=int)
     decode_group.add_argument("--context-length", default=2, type=int)
     decode_group.add_argument("--oracle", default=False, action='store_true')
+    decode_group.add_argument("--max-samples", default=-1, type=int)
 
     data_group = sub_parser.add_argument_group('data')
     data_group.add_argument("--name", type=str, choices=DATASETS)
