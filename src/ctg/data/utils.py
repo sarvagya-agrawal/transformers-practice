@@ -95,8 +95,9 @@ def load_data(src_fname: PosixPath,
             np.array(examples), batch_first=True,
             padding_value=tokenizer.pad_token_id if
             tokenizer._pad_token is not None else 0.)
+    print(len(dataset))
     if max_length > 0:
-        dataset = dataset.select(range(max_samples))
+        dataset = dataset.select(range(min(max_samples, len(dataset))))
     dataset = dataset.map(
         tokenize,
         batched=True,

@@ -23,8 +23,8 @@ val-src: _test-dataset/valid.json
 task: nmt
 overwrite_cache: True
 num-workers: 4
-max-train-samples: 10000
-max-val-samples: 10000
+max-train-samples: 100
+max-val-samples: 100
 
 # io
 output: _test-output
