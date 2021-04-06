@@ -50,6 +50,7 @@ def load_data(src_fname: PosixPath,
               max_length: int,
               batch_size: int,
               cache_dir: PosixPath,
+              max_samples: int = -1,
               overwrite_cache: bool = False,
               num_workers: int = 4,
               split: str = 'train',
@@ -83,9 +84,9 @@ def load_data(src_fname: PosixPath,
                                     max_length=max_length,
                                     return_tensors='np',
                                     truncation=True)
-                # targets["input_ids"] = [
-                #     [(_label if _label != tokenizer.pad_token_id else -1e6)
-                #         for _label in label] for label in targets["input_ids"]]
+                targets["input_ids"] = [
+                    [(_label if _label != tokenizer.pad_token_id else -1e6)
+                        for _label in label] for label in targets["input_ids"]]
             inputs["labels"] = targets["input_ids"]
         return inputs
 
@@ -94,6 +95,8 @@ def load_data(src_fname: PosixPath,
             np.array(examples), batch_first=True,
             padding_value=tokenizer.pad_token_id if
             tokenizer._pad_token is not None else 0.)
+    if max_length > 0:
+        dataset = dataset.select(range(max_samples))
     dataset = dataset.map(
         tokenize,
         batched=True,
@@ -109,7 +112,6 @@ def load_data(src_fname: PosixPath,
     else:
         sampler = torch.utils.data.distributed.DistributedSampler(dataset) if \
             split == 'train' else SequentialSampler(dataset)
-    return dataset
     return DataLoader(
         dataset,
         sampler=sampler,

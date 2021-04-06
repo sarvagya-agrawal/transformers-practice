@@ -37,6 +37,8 @@ def train_args(sub_parser: ArgumentParser) -> None:
     data_group.add_argument("--task", type=str, choices=TASKS)
     data_group.add_argument("--overwrite-cache", type=str)
     data_group.add_argument("--num-workers", type=int, default=4)
+    data_group.add_argument("--max-train-samples", type=int, default=-1)
+    data_group.add_argument("--max-val-samples", type=int, default=-1)
 
     io_group = sub_parser.add_argument_group('io')
     io_group.add_argument("--output", type=str)
