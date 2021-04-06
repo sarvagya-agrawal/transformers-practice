@@ -30,4 +30,4 @@ max-val-samples: 100
 output: _test-output
 checkpoint: _test-checkpoint
 cache-dir: _test-cache
-save-freq: 25
+save-freq: 1

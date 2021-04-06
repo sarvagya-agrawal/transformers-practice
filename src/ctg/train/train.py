@@ -271,31 +271,22 @@ class TrainingAgent:
         for step, batch in enumerate(
                 tqdm.tqdm(self.train_loader,
                           desc=f'Trial {trial} | Epoch {epoch} | Train')):
+            inputs = batch['input_ids'].to(
+                self.device, non_blocking=True)
+            labels = inputs
+            attention_mask = None
             if 'labels' in batch.keys():
-                inputs = batch['input_ids'].to(
+                labels = batch['labels'].to(
                     self.device, non_blocking=True)
+            if 'attention_mask' in batch.keys():
                 attention_mask = batch['attention_mask'].to(
                     self.device, non_blocking=True)
-                targets = batch['labels'].to(
-                    self.device, non_blocking=True)
-            elif 'attention_mask' not in batch.keys():
-                inputs = batch['input_ids'].to(
-                    self.device, non_blocking=True)
-                attention_mask = None
-                targets = inputs
-            elif 'attention_mask' in batch.keys():
-                inputs = batch['input_ids'].to(
-                    self.device, non_blocking=True)
-                attention_mask = batch['attention_mask'].to(
-                    self.device, non_blocking=True)
-                targets = inputs
             self.optimizer.zero_grad()
-            outputs = self.model(
+            loss = self.model(
                 inputs,
                 attention_mask=attention_mask,
-                labels=targets)
-            del inputs, attention_mask, targets
-            loss = outputs[0]
+                labels=labels).loss
+            del inputs, attention_mask, labels
             # loss = self.criterion(outputs, targets)
             if isinstance(self.gpu, list):
                 loss = loss.mean()
@@ -315,29 +306,20 @@ class TrainingAgent:
         for step, batch in enumerate(
                 tqdm.tqdm(self.val_loader,
                           desc=f'Trial {trial} | Epoch {epoch} | Validate')):
+            inputs = batch['input_ids'].to(
+                self.device, non_blocking=True)
+            labels = inputs
+            attention_mask = None
             if 'labels' in batch.keys():
-                inputs = batch['input_ids'].to(
+                labels = batch['labels'].to(
                     self.device, non_blocking=True)
+            if 'attention_mask' in batch.keys():
                 attention_mask = batch['attention_mask'].to(
                     self.device, non_blocking=True)
-                targets = batch['labels'].to(
-                    self.device, non_blocking=True)
-            elif 'attention_mask' not in batch.keys():
-                inputs = batch['input_ids'].to(
-                    self.device, non_blocking=True)
-                attention_mask = None
-                targets = inputs
-            elif 'attention_mask' in batch.keys():
-                inputs = batch['input_ids'].to(
-                    self.device, non_blocking=True)
-                attention_mask = batch['attention_mask'].to(
-                    self.device, non_blocking=True)
-                targets = inputs
             with torch.no_grad():
-                outputs = self.model(
-                    inputs, attention_mask=attention_mask, labels=targets)
-            del inputs, attention_mask, targets
-            loss = outputs[0]
+                loss = self.model(
+                    inputs, attention_mask=attention_mask, labels=labels).loss
+            del inputs, attention_mask, labels
             if isinstance(self.gpu, list):
                 loss = loss.mean()
             val_loss += loss.item()
@@ -351,7 +333,7 @@ def main(args: Namespace) -> None:
     logger.info(f"GPU: {args.gpu}")
     logger.info(f"NGPUS: {ngpus_per_node}")
     if args.mpd and not args.cpu:
-        log_q = mp_logger
+        log_q = None  # mp_logger(args.log)
         args.world_size *= ngpus_per_node
         mp.spawn(worker, nprocs=ngpus_per_node,
                  args=(ngpus_per_node, deepcopy(args), log_q))

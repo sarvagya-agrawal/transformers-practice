@@ -20,9 +20,7 @@ from .configs import CONFIG_DICTS
 
 TOKENIZERS = set(['bert-base-uncased', 'openai-gpt',
                   'gpt2', 'bert-base-uncased', 't5-small'])
-MODELS = set(
-    ['gpt2', 'distilgpt2', 'bert-base-uncased', 't5-small', '**/best'])
-SEQ2SEQ_MODELS = set(['t5-small'])
+MODELS = set(['gpt2', 'distilgpt2', 'bert-base-uncased', 't5-small'])
 
 
 def get_tokenizer(tokenizer_name: str,
@@ -65,10 +63,7 @@ def get_model(model_name: str,
               pretrained: bool = True,
               weights: str = None,
               task: str = 'clm') -> torch.nn.Module:
-    if task == 'nmt' and model_name in SEQ2SEQ_MODELS:
-        _model = AutoModelForSeq2SeqLM
-        _config = None
-    elif model_name == 'gpt2':
+    if model_name == 'gpt2':
         _model = GPT2LMHeadModel
         _config = GPT2Config()
     elif model_name == 'distilgpt2':
@@ -77,9 +72,11 @@ def get_model(model_name: str,
     elif model_name == 'bert-base-uncased':
         _model = BertLMHeadModel
         _config = BertConfig
-    elif model_name == 't5-small':
+    elif model_name == 't5-small' and task == 'nmt':
         _model = T5ForConditionalGeneration
         _config = None
+    else:
+        raise ValueError("Unknown model and/or task")
     if pretrained:
         model_name = weights if weights is not None else model_name
         if _config is not None:
@@ -94,7 +91,7 @@ def get_model(model_name: str,
     else:
         model = _model(
             config=_config(**CONFIG_DICTS[model_name]))
-    # if task == 'nmt' and model.config.decoder_state_token_id is None:
-    #     raise ValueError(
-    #         "Make sure that `decoder_start_token_id` is correctly defined")
+    if task == 'nmt' and model.config.decoder_start_token_id is None:
+        raise ValueError(
+            "Make sure that `decoder_start_token_id` is correctly defined")
     return model

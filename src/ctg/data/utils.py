@@ -54,6 +54,7 @@ def load_data(src_fname: PosixPath,
               overwrite_cache: bool = False,
               num_workers: int = 4,
               split: str = 'train',
+              prefix: str = '',
               distributed: bool = False) -> None:
     if src_fname.suffix not in set(['.json']) or not src_fname.exists():
         raise ValueError(f"Unknown src file {src_fname}. Files must be",
@@ -68,6 +69,7 @@ def load_data(src_fname: PosixPath,
 
     def tokenize(examples: List[str]) -> Tuple[List[int], None]:
         inputs = examples["source"]
+        inputs = [prefix + i for i in inputs]
         inputs = tokenizer(
             inputs,
             add_special_tokens=True,
@@ -87,6 +89,7 @@ def load_data(src_fname: PosixPath,
                 # targets["input_ids"] = [
                 #     [(_label if _label != tokenizer.pad_token_id else -1e6)
                 #         for _label in label] for label in targets["input_ids"]]
+            del inputs['attention_mask']
             inputs["labels"] = targets["input_ids"]
         return inputs
 

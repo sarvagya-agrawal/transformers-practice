@@ -20,7 +20,6 @@ DECODE_METHODS = ['greedy', 'beam']
 def get_decoder(method: str) -> callable:
     if method == 'greedy':
         def greedy(model: torch.nn.Module, inputs: torch.Tensor,
-                   attention_mask: torch.Tensor,
                    max_length: int, break_tokens: List[str]):
             # outputs = []
             # while decoded_token not in break_tokens:
@@ -28,14 +27,13 @@ def get_decoder(method: str) -> callable:
             #         inputs, max_length=max_length)[0]
             #     next_token = torch.argmax(output[0, -1, :]).item()
             # with torch.no_grad():
-            outputs = model.generate(inputs, attention_mask=attention_mask,
+            outputs = model.generate(inputs,
                                      max_length=max_length)
             return outputs
         return greedy
     elif method == 'beam':
         def beam_search(model: torch.nn.Module,
                         inputs: torch.Tensor,
-                        attention_mask: torch.Tensor,
                         beam_depth: int = -1,
                         beam_width: int = -1):
             if not beam_width > 0 or not beam_depth > 0:
@@ -43,7 +41,6 @@ def get_decoder(method: str) -> callable:
             # with torch.no_grad():
             outputs = model.generate(
                 inputs,
-                attention_mask=attention_mask,
                 max_length=beam_depth,
                 num_beam=beam_width, early_stopping=True,
                 num_return_sequences=beam_width)
@@ -58,7 +55,8 @@ def main(args: Namespace) -> None:
     model = get_model(args.decode.model,
                       weights=args.decode.weights,
                       cache_dir=args.io.cache_dir,
-                      pretrained=True)
+                      pretrained=True,
+                      task=args.data.task)
     model.eval()
     device = torch.device('cuda', args.gpu)
     model.to(device)
@@ -87,16 +85,12 @@ def main(args: Namespace) -> None:
                       desc='Decoding')):
         inputs = batch['input_ids'].to(
             device, non_blocking=True)
-        attention_mask = batch['attention_mask'].to(
-            device, non_blocking=True)
         if args.decode.method == 'greedy':
             outputs = decoder(model, inputs,
-                              attention_mask,
                               max_length=args.decode.max_length,
                               break_tokens=break_tokens)
         elif args.decode.method == 'beam':
             outputs = decoder(model, inputs,
-                              attention_mask,
                               beam_depth=args.decode.beam_depth,
                               beam_width=args.decode.beam_width)
         text = tokenizer.batch_decode(
