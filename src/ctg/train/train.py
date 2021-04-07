@@ -169,6 +169,7 @@ class TrainingAgent:
             self.args.io.resume = None
             self.reset()
             return
+        self.args.train.pretrained = True
         train_state = torch.load(str(path / 'train_state.pt'))
         # train_state['args'].io.resume = self.args.io.resume
         # if self.args != train_state['args']:
