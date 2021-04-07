@@ -11,6 +11,8 @@ from pathlib import Path
 import logging
 import time
 
+from transformers import EncoderDecoderModel
+
 import torch.multiprocessing as mp
 import torch.distributed as dist
 import pandas as pd
@@ -18,10 +20,10 @@ import numpy as np
 import torch
 import tqdm
 
+from ..data.utils import load_data, right_shift
 from ..models import get_tokenizer, get_model
 from ..utils.logging import logger, mp_logger
 from ..optim import get_optimizer_scheduler
-from ..data.utils import load_data
 from ..utils.io import create_dir
 
 
@@ -282,10 +284,19 @@ class TrainingAgent:
                 attention_mask = batch['attention_mask'].to(
                     self.device, non_blocking=True)
             self.optimizer.zero_grad()
-            loss = self.model(
-                inputs,
-                attention_mask=attention_mask,
-                labels=labels).loss
+            if isinstance(self.model, EncoderDecoderModel):
+                loss = self.model(
+                    input_ids=inputs,
+                    decoder_input_ids=right_shift(self.tokenizer.pad_token_id,
+                                                  self.tokenizer.pad_token_id,
+                                                  inputs),
+                    attention_mask=attention_mask,
+                    labels=labels).loss
+            else:
+                loss = self.model(
+                    input_ids=inputs,
+                    attention_mask=attention_mask,
+                    labels=labels).loss
             del inputs, attention_mask, labels
             # loss = self.criterion(outputs, targets)
             if isinstance(self.gpu, list):

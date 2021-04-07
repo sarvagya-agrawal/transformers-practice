@@ -17,6 +17,25 @@ from torch.nn.utils.rnn import pad_sequence
 from datasets import load_dataset
 
 
+def right_shift(start_token_id: int,
+                pad_token_id: int,
+                input_ids: torch.Tensor) -> torch.Tensor:
+    # shift inputs to the right
+    shifted_input_ids = input_ids.new_zeros(input_ids.shape)
+    shifted_input_ids[..., 1:] = input_ids[..., :-1].clone()
+    shifted_input_ids[..., 0] = start_token_id
+
+    assert pad_token_id is not None, \
+        "self.model.config.pad_token_id has to be defined."
+    # replace possible -100 values in labels by `pad_token_id`
+    shifted_input_ids.masked_fill_(shifted_input_ids == -100, pad_token_id)
+
+    assert torch.all(shifted_input_ids >= 0).item(
+    ), "Verify that `shifted_input_ids` has only positive values"
+
+    return shifted_input_ids
+
+
 class LineByLineTextDataset(Dataset):
     def __init__(self, tokenizer, file_path, max_length=512):
         with open(file_path, encoding="utf-8") as f:
@@ -86,10 +105,11 @@ def load_data(src_fname: PosixPath,
                                     max_length=max_length,
                                     return_tensors='np',
                                     truncation=True)
-                # targets["input_ids"] = [
-                #     [(_label if _label != tokenizer.pad_token_id else -1e6)
-                #         for _label in label] for label in targets["input_ids"]]
-            del inputs['attention_mask']
+                # -100 is a specific number for masking
+                targets["input_ids"] = [
+                    [(_label if _label != tokenizer.pad_token_id else -100)
+                        for _label in label] for label in targets["input_ids"]]
+            # del inputs['attention_mask']
             inputs["labels"] = targets["input_ids"]
         return inputs
 

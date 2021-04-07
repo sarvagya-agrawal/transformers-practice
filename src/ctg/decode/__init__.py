@@ -7,6 +7,8 @@ from argparse import Namespace
 from pathlib import Path
 from typing import List
 
+from transformers import EncoderDecoderModel
+
 import torch
 import tqdm
 
@@ -27,8 +29,14 @@ def get_decoder(method: str) -> callable:
             #         inputs, max_length=max_length)[0]
             #     next_token = torch.argmax(output[0, -1, :]).item()
             # with torch.no_grad():
-            outputs = model.generate(inputs,
-                                     max_length=max_length)
+            if isinstance(model, EncoderDecoderModel):
+                outputs = model.generate(
+                    inputs, max_length=max_length,
+                    decoder_start_token_id=model.config.decoder.pad_token_id)
+            else:
+                outputs = model.generate(
+                    inputs, max_length=max_length,
+                    decoder_start_token_id=model.config.pad_token_id)
             return outputs
         return greedy
     elif method == 'beam':

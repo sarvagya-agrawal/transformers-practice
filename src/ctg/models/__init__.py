@@ -11,7 +11,9 @@ from transformers import (
     GPT2Config, GPT2LMHeadModel, BertLMHeadModel,
     AutoTokenizer, BertConfig,
     AutoModelForSeq2SeqLM,
-    T5ForConditionalGeneration
+    T5ForConditionalGeneration,
+    EncoderDecoderModel,
+    EncoderDecoderConfig
 )
 
 import torch
@@ -54,6 +56,12 @@ def get_tokenizer(tokenizer_name: str,
     if tokenizer._pad_token is None:
         tokenizer.add_special_tokens(
             {'pad_token': '[PAD]'})
+    if tokenizer.bos_token is None:
+        tokenizer.add_special_tokens(
+            {'bos_token': '[BOS]'})
+    if tokenizer.eos_token is None:
+        tokenizer.add_special_tokens(
+            {'eos_token': '[EOS]'})
         # tokenizer.pad_token = 0.
     return tokenizer
 
@@ -70,8 +78,21 @@ def get_model(model_name: str,
         _model = GPT2LMHeadModel
         _config = GPT2Config
     elif model_name == 'bert-base-uncased':
-        _model = BertLMHeadModel
-        _config = BertConfig
+        if task == 'nmt':
+            if weights is not None:
+                _model = EncoderDecoderModel
+                _config = EncoderDecoderConfig
+            else:
+                _config = EncoderDecoderConfig.from_encoder_decoder_configs(
+                    BertConfig(), BertConfig(),
+                    cache_dir=cache_dir)
+                model = EncoderDecoderModel(config=_config)
+                model.config.decoder.is_decoder = True
+                model.config.decoder.add_cross_attention = True
+            return model
+        elif task == 'clm':
+            _model = BertLMHeadModel
+            _config = BertConfig
     elif model_name == 't5-small' and task == 'nmt':
         _model = T5ForConditionalGeneration
         _config = None
@@ -79,15 +100,11 @@ def get_model(model_name: str,
         raise ValueError("Unknown model and/or task")
     if pretrained:
         model_name = weights if weights is not None else model_name
-        if _config is not None:
-            model = _model.from_pretrained(
-                model_name,
-                cache_dir=cache_dir,
-                config=_config.from_pretrained(model_name))
-        else:
-            model = _model.from_pretrained(
-                model_name,
-                cache_dir=cache_dir)
+        model = _model.from_pretrained(
+            model_name,
+            cache_dir=cache_dir,
+            config=_config.from_pretrained(model_name) if _config is not
+            None else None)
     else:
         model = _model(
             config=_config(**CONFIG_DICTS[model_name]))
