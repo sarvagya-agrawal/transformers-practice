@@ -288,9 +288,10 @@ class TrainingAgent:
             if isinstance(self.model, EncoderDecoderModel):
                 loss = self.model(
                     input_ids=inputs,
-                    decoder_input_ids=right_shift(self.tokenizer.pad_token_id,
-                                                  self.tokenizer.pad_token_id,
-                                                  inputs),
+                    decoder_input_ids=right_shift(
+                        self.tokenizer.pad_token_id,
+                        self.tokenizer.pad_token_id,
+                        inputs).to(self.device, non_blocking=True),
                     attention_mask=attention_mask,
                     labels=labels).loss
             else:
