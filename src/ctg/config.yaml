@@ -1,7 +1,7 @@
 # Train parameters
-model: t5-small
-tokenizer: t5-small
-pretrained: False
+model: bert-base-uncased
+tokenizer: bert-base-uncased
+pretrained: True
 optimizer: AdamW
 scheduler: LinearLambdaLR
 batch-size: 1

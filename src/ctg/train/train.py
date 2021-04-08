@@ -284,20 +284,14 @@ class TrainingAgent:
                 attention_mask = batch['attention_mask'].to(
                     self.device, non_blocking=True)
             self.optimizer.zero_grad()
-            if isinstance(self.model, EncoderDecoderModel):
-                loss = self.model(
-                    input_ids=inputs,
-                    decoder_input_ids=right_shift(
-                        self.tokenizer.pad_token_id,
-                        self.tokenizer.pad_token_id,
-                        inputs).to(self.device, non_blocking=True),
-                    attention_mask=attention_mask,
-                    labels=labels).loss
-            else:
-                loss = self.model(
-                    input_ids=inputs,
-                    attention_mask=attention_mask,
-                    labels=labels).loss
+            loss = self.model(
+                input_ids=inputs,
+                # decoder_input_ids=right_shift(
+                #     self.tokenizer.pad_token_id,
+                #     self.tokenizer.pad_token_id,
+                #     inputs).to(self.device, non_blocking=True),
+                attention_mask=attention_mask,
+                labels=labels).loss
             del inputs, attention_mask, labels
             # loss = self.criterion(outputs, targets)
             if isinstance(self.gpu, list):

@@ -5,7 +5,7 @@
 """
 from argparse import Namespace
 
-from onmt.bin.train import train as onmt_train
+# from onmt.bin.train import train as onmt_train
 from .train import main as train_main
 
 
