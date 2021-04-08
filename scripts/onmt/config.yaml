@@ -1,0 +1,39 @@
+# for build vocab
+save_data: /home/mat/archive/datasets/smcalflow/onmt-built
+src_vocab: /home/mat/archive/datasets/smcalflow/onmt-built/vocab.src
+tgt_vocab: /home/mat/archive/datasets/smcalflow/onmt-built/vocab.tgt
+overwrite: False
+data:
+  corpus:
+    path_src: /home/mat/archive/datasets/smcalflow/prepared-context2/train.src
+    path_tgt: /home/mat/archive/datasets/smcalflow/prepared-context2/train.tgt
+  valid:
+    path_src: /home/mat/archive/datasets/smcalflow/prepared-context2/valid.src
+    path_tgt: /home/mat/archive/datasets/smcalflow/prepared-context2/valid.tgt
+# for train
+# src_vocab: /home/mat/archive/datasets/smcalflow/onmt-built/vocab.src
+# tgt_vocab: /home/mat/archive/datasets/smcalflow/onmt-built/vocab.tgt
+world_Size: 1
+gpu_ranks: [0]
+save_model: /home/mat/Documents/U-of-T/grad-school/courses/csc2542/project/model-weights/blstm-smcalflow
+encoder_type: brnn
+decoder_type: rnn
+rnn_type: LSTM
+global_attention: general
+global_attention_function: softmax
+generator_function: softmax
+copy_attn_type: general
+copy_attn: True
+seed: 1
+optim: adam
+learning_rate: 0.001
+early_stopping: 2
+batch_size: 64
+valid_batch_size: 8
+valid_steps: 200
+save_checkpoint_steps: 200
+word_vec_size: 300
+attention_dropout: 0
+dropout: 0.5
+layers: 2
+rnn_size: 384
