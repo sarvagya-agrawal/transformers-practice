@@ -12,6 +12,7 @@ from transformers import (
     AutoTokenizer, BertConfig,
     AutoModelForSeq2SeqLM,
     T5ForConditionalGeneration,
+    T5Config,
     EncoderDecoderModel,
     EncoderDecoderConfig
 )
@@ -95,7 +96,7 @@ def get_model(model_name: str,
             _config = BertConfig
     elif model_name == 't5-small' and task == 'nmt':
         _model = T5ForConditionalGeneration
-        _config = None
+        _config = T5Config
     else:
         raise ValueError("Unknown model and/or task")
     if pretrained:

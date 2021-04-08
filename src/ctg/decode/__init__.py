@@ -81,6 +81,7 @@ def main(args: Namespace) -> None:
         max_samples=args.decode.max_samples,
         batch_size=args.decode.batch_size,
         cache_dir=args.io.cache_dir,
+        prefix=args.data.prefix,
         overwrite_cache=args.data.overwrite_cache,
         num_workers=args.data.num_workers,
         split='test',
