@@ -163,7 +163,6 @@ class TrainingAgent:
             return model
 
     def load_checkpoint(self, path: Path) -> None:
-        print(path.exists())
         if not path.exists():
             logger.warning("Unknown resume. Starting from scratch.")
             self.args.io.resume = None

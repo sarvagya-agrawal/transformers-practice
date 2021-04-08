@@ -57,10 +57,10 @@ def get_tokenizer(tokenizer_name: str,
     if tokenizer._pad_token is None:
         tokenizer.add_special_tokens(
             {'pad_token': '[PAD]'})
-    if tokenizer.bos_token is None:
+    if tokenizer._bos_token is None:
         tokenizer.add_special_tokens(
             {'bos_token': '[BOS]'})
-    if tokenizer.eos_token is None:
+    if tokenizer._eos_token is None:
         tokenizer.add_special_tokens(
             {'eos_token': '[EOS]'})
         # tokenizer.pad_token = 0.

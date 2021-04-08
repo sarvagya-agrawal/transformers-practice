@@ -16,6 +16,8 @@ from torch.utils.data import Dataset, DataLoader, \
 from torch.nn.utils.rnn import pad_sequence
 from datasets import load_dataset
 
+from ..utils.logging import logger
+
 
 def right_shift(start_token_id: int,
                 pad_token_id: int,
@@ -85,6 +87,8 @@ def load_data(src_fname: PosixPath,
                            split=split)
     # dataset = LineByLineTextDataset(tokenizer, file_path=str(src_fname),
     #                                 max_length=max_length)
+
+    logger.info("Loading data")
 
     def tokenize(examples: List[str]) -> Tuple[List[int], None]:
         inputs = examples["source"]
