@@ -86,6 +86,7 @@ def load_data(fname: PosixPath,
               tokenizer: PreTrainedTokenizerBase,
               max_length: int,
               batch_size: int,
+              task: str,
               cache_dir: PosixPath,
               max_samples: int = -1,
               overwrite_cache: bool = False,
@@ -133,11 +134,6 @@ def load_data(fname: PosixPath,
             inputs["labels"] = targets["input_ids"]
         return inputs
 
-    def collate(examples):
-        return pad_sequence(
-            np.array(examples), batch_first=True,
-            padding_value=tokenizer.pad_token_id if
-            tokenizer._pad_token is not None else 0.)
     if max_samples > 0:
         dataset = dataset.select(range(min(max_samples, len(dataset))))
     dataset = dataset.map(

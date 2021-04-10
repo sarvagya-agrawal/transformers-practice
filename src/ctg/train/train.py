@@ -76,11 +76,12 @@ class TrainingAgent:
                                        task=self.args.data.task)
         logger.info("Loading train dataset...")
         extend_vocabulary(self.tokenizer, fname=Path(self.args.data.train_src))
-        extend_vocabulary(self.tokenizer, fname=Path(self.args.data.valid_src))
+        # extend_vocabulary(self.tokenizer, fname=Path(valid_src))
         self.train_loader, self.train_sampler = load_data(
             fname=Path(self.args.data.train_src),
             tokenizer=self.tokenizer,
             cache_dir=self.args.io.cache_dir,
+            task=self.args.data.task,
             max_samples=self.args.data.max_train_samples,
             max_length=self.args.train.max_length,
             batch_size=self.args.train.batch_size,
@@ -93,6 +94,7 @@ class TrainingAgent:
             fname=Path(self.args.data.val_src),
             tokenizer=self.tokenizer,
             cache_dir=self.args.io.cache_dir,
+            task=self.args.data.task,
             max_samples=self.args.data.max_val_samples,
             max_length=self.args.train.max_length,
             batch_size=self.args.train.batch_size,

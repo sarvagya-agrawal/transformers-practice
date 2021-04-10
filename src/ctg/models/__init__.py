@@ -84,12 +84,18 @@ def get_model(model_name: str,
                 _model = EncoderDecoderModel
                 _config = EncoderDecoderConfig
             else:
-                _config = EncoderDecoderConfig.from_encoder_decoder_configs(
-                    BertConfig(), BertConfig(),
-                    cache_dir=cache_dir)
-                model = EncoderDecoderModel(config=_config)
-                model.config.decoder.is_decoder = True
-                model.config.decoder.add_cross_attention = True
+                if pretrained:
+                    model = \
+                        EncoderDecoderModel.from_encoder_decoder_pretrained(
+                            model_name, model_name)
+                    return model
+                else:
+                    _config = EncoderDecoderConfig.from_encoder_decoder_configs(
+                        BertConfig(), BertConfig(),
+                        cache_dir=cache_dir)
+                    model = EncoderDecoderModel(config=_config)
+                    model.config.decoder.is_decoder = True
+                    model.config.decoder.add_cross_attention = True
             return model
         elif task == 'clm':
             _model = BertLMHeadModel
