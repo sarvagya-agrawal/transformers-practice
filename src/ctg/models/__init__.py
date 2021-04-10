@@ -88,13 +88,15 @@ def get_model(model_name: str,
                     encoder = BertModel.from_pretrained(
                         model_name, config=encoder_config,
                         cache_dir=cache_dir)
-                    decoder_config = BertConfig(  # vocab_size=tokenizer_len,
-                        is_decoder=True,
-                        add_cross_attention=True)
+                    decoder_config = BertConfig()  # vocab_size=tokenizer_len,
+                    # is_decoder=True,
+                    # add_cross_attention=True)
                     decoder = BertLMHeadModel.from_pretrained(
                         model_name,
                         config=decoder_config,
                         cache_dir=cache_dir)
+                    decoder.is_decoder = True
+                    decoder.add_cross_atention = True
                     encoder.resize_token_embeddings(tokenizer_len)
                     decoder.resize_token_embeddings(tokenizer_len)
                     model = EncoderDecoderModel(

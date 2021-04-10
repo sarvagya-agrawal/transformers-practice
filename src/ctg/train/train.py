@@ -20,7 +20,7 @@ import numpy as np
 import torch
 import tqdm
 
-from ..data.utils import extend_vocabulary, load_data
+from ..data.utils import extend_vocabulary, load_data, right_shift
 from ..models import get_tokenizer, get_model
 from ..utils.logging import logger, mp_logger
 from ..optim import get_optimizer_scheduler
@@ -292,14 +292,25 @@ class TrainingAgent:
                 attention_mask = batch['attention_mask'].to(
                     self.device, non_blocking=True)
             self.optimizer.zero_grad()
-            loss = self.model(
-                input_ids=inputs,
-                # decoder_input_ids=right_shift(
-                #     self.tokenizer.pad_token_id,
-                #     self.tokenizer.pad_token_id,
-                #     inputs).to(self.device, non_blocking=True),
-                attention_mask=attention_mask,
-                labels=labels).loss
+            print(inputs)
+            if self.args.train.model == 'bert-base-uncased' and self.args.data.task == 'nmt':
+                loss = self.model(
+                    input_ids=inputs,
+                    decoder_input_ids=right_shift(
+                        self.tokenizer.pad_token_id,
+                        self.tokenizer.pad_token_id,
+                        inputs).to(self.device, non_blocking=True),
+                    attention_mask=attention_mask,
+                    labels=labels).loss
+            else:
+                loss = self.model(
+                    input_ids=inputs,
+                    # decoder_input_ids=right_shift(
+                    #     self.tokenizer.pad_token_id,
+                    #     self.tokenizer.pad_token_id,
+                    #     inputs).to(self.device, non_blocking=True),
+                    attention_mask=attention_mask,
+                    labels=labels).loss
             del inputs, attention_mask, labels
             # loss = self.criterion(outputs.logits, targets) with labels=None
             if isinstance(self.gpu, list):
