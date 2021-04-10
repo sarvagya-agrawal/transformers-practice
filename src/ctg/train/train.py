@@ -137,11 +137,13 @@ class TrainingAgent:
                 self.model.to(self.device)
                 self.model = torch.nn.parallel.DistributedDataParallel(
                     self.model,
-                    device_ids=[self.gpu])
+                    device_ids=[self.gpu],
+                    find_unused_parameters=True)
             else:
                 self.model.cuda()
                 self.model = torch.nn.parallel.DistributedDataParallel(
-                    self.model)
+                    self.model,
+                    find_unused_parameters=True)
         elif isinstance(self.gpu, list):
             self.model = torch.nn.DataParallel(self.model)
             self.model.to(self.device)
@@ -292,8 +294,8 @@ class TrainingAgent:
                 attention_mask = batch['attention_mask'].to(
                     self.device, non_blocking=True)
             self.optimizer.zero_grad()
-            print(inputs)
-            if self.args.train.model == 'bert-base-uncased' and self.args.data.task == 'nmt':
+            if self.args.train.model == 'bert-base-uncased' and \
+                    self.args.data.task == 'nmt':
                 loss = self.model(
                     input_ids=inputs,
                     decoder_input_ids=right_shift(
