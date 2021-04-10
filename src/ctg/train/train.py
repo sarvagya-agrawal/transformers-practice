@@ -11,6 +11,7 @@ from pathlib import Path
 import logging
 import time
 
+from torch.optim.lr_scheduler import LambdaLR, StepLR
 
 import torch.multiprocessing as mp
 import torch.distributed as dist
@@ -74,9 +75,10 @@ class TrainingAgent:
                                        self.args.io.cache_dir,
                                        dataset=self.args.data.name,
                                        task=self.args.data.task)
-        logger.info("Loading train dataset...")
-        extend_vocabulary(self.tokenizer, fname=Path(self.args.data.train_src))
+        logger.info("Extending vocab...")
+        extend_vocabulary(self.tokenizer, fname=Path(self.args.data.vocab))
         # extend_vocabulary(self.tokenizer, fname=Path(valid_src))
+        logger.info("Loading train dataset...")
         self.train_loader, self.train_sampler = load_data(
             fname=Path(self.args.data.train_src),
             tokenizer=self.tokenizer,
@@ -115,6 +117,7 @@ class TrainingAgent:
         else:
             self.model = get_model(self.args.train.model,
                                    cache_dir=self.args.io.cache_dir,
+                                   tokenizer_len=len(self.tokenizer),
                                    pretrained=self.args.train.pretrained,
                                    task=self.args.data.task)
             self.optimizer, self.scheduler = get_optimizer_scheduler(
@@ -125,6 +128,7 @@ class TrainingAgent:
                 train_loader_len=len(self.train_loader),
                 optimizer_kwargs=self.args.train.optimizer_kwargs,
                 scheduler_kwargs=self.args.train.scheduler_kwargs)
+        # self.model.resize_token_embeddings(len(self.tokenizer))
         # if self.args.rank == 0:
         #     dist.barrier()
         # self.model.to(self.device)
@@ -179,6 +183,7 @@ class TrainingAgent:
         self.model = get_model(
             self.args.train.model,
             cache_dir=self.args.io.cache_dir,
+            tokenizer_len=len(self.tokenizer),
             pretrained=True,
             weights=str(path),
             task=self.args.data.task)
@@ -242,7 +247,7 @@ class TrainingAgent:
             train_loss = self.epoch_iteration(trial, epoch)
             epoch_time = time.time()
             val_loss = self.validate(trial, epoch)
-            if self.scheduler is not None:
+            if isinstance(self.scheduler, StepLR):
                 self.scheduler.step()
             end_time = time.time()
             logger.info(f"T {trial} | E {epoch} | " +
@@ -296,7 +301,7 @@ class TrainingAgent:
                 attention_mask=attention_mask,
                 labels=labels).loss
             del inputs, attention_mask, labels
-            # loss = self.criterion(outputs, targets)
+            # loss = self.criterion(outputs.logits, targets) with labels=None
             if isinstance(self.gpu, list):
                 loss = loss.mean()
             # if self.args.train.gradient_accumulation_steps > 1:
@@ -307,6 +312,8 @@ class TrainingAgent:
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(),
                                                self.args.train.clip_grad)
             self.optimizer.step()
+            if isinstance(self.scheduler, LambdaLR):
+                self.scheduler.step()
         return train_loss / (step + 1)
 
     def validate(self, trial: int, epoch: int) -> float:

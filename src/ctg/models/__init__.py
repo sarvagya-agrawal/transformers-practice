@@ -8,13 +8,11 @@ from pathlib import Path
 # BertTokenizer, OpenAIGPTTokenizer, GPT2Tokenizer, AlbertTokenizer
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from transformers import (
-    GPT2Config, GPT2LMHeadModel, BertLMHeadModel,
-    AutoTokenizer, BertConfig,
-    AutoModelForSeq2SeqLM,
-    T5ForConditionalGeneration,
-    T5Config,
-    EncoderDecoderModel,
-    EncoderDecoderConfig
+    GPT2Config, GPT2LMHeadModel,
+    AutoTokenizer, AutoModelForSeq2SeqLM,
+    T5ForConditionalGeneration, T5Config,
+    EncoderDecoderModel, EncoderDecoderConfig,
+    BertConfig, BertModel, BertForMaskedLM, BertLMHeadModel,
 )
 
 import torch
@@ -69,6 +67,7 @@ def get_tokenizer(tokenizer_name: str,
 
 def get_model(model_name: str,
               cache_dir: Path,
+              tokenizer_len: int,
               pretrained: bool = True,
               weights: str = None,
               task: str = 'clm') -> torch.nn.Module:
@@ -85,17 +84,23 @@ def get_model(model_name: str,
                 _config = EncoderDecoderConfig
             else:
                 if pretrained:
-                    model = \
-                        EncoderDecoderModel.from_encoder_decoder_pretrained(
-                            model_name, model_name)
-                    return model
-                else:
-                    _config = EncoderDecoderConfig.from_encoder_decoder_configs(
-                        BertConfig(), BertConfig(),
+                    encoder_config = BertConfig()  # vocab_size=tokenizer_len)
+                    encoder = BertModel.from_pretrained(
+                        model_name, config=encoder_config,
                         cache_dir=cache_dir)
-                    model = EncoderDecoderModel(config=_config)
-                    model.config.decoder.is_decoder = True
-                    model.config.decoder.add_cross_attention = True
+                    decoder_config = BertConfig(  # vocab_size=tokenizer_len,
+                        is_decoder=True,
+                        add_cross_attention=True)
+                    decoder = BertLMHeadModel.from_pretrained(
+                        model_name,
+                        config=decoder_config,
+                        cache_dir=cache_dir)
+                    encoder.resize_token_embeddings(tokenizer_len)
+                    decoder.resize_token_embeddings(tokenizer_len)
+                    model = EncoderDecoderModel(
+                        encoder=encoder, decoder=decoder)
+                else:
+                    pass
             return model
         elif task == 'clm':
             _model = BertLMHeadModel
@@ -118,4 +123,5 @@ def get_model(model_name: str,
     if task == 'nmt' and model.config.decoder_start_token_id is None:
         raise ValueError(
             "Make sure that `decoder_start_token_id` is correctly defined")
+    model.resize_token_embeddings(tokenizer_len)
     return model

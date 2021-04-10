@@ -69,17 +69,11 @@ class LineByLineTextDataset(Dataset):
 
 
 def extend_vocabulary(tokenizer, fname: PosixPath) -> None:
-    spacy_en = spacy.load('en_core_web_sm')
-    if fname.suffix not in set(['.json']) or not fname.exists():
+    if fname.suffix not in set(['.txt']) or not fname.exists():
         raise ValueError(f"Unknown src file {fname}. Files must be",
-                         " .json files")
-    with fname.open('r') as f:
-        data = json.load(f)
-    for line in data['data']:
-        tokenizer.add_tokens(
-            [tok.text for tok in spacy_en.tokenizer(line['src'])])
-        tokenizer.add_tokens(
-            [tok.text for tok in spacy_en.tokenizer(line['tgt'])])
+                         " .txt line by line files")
+    vocab = [line.strip() for line in fname.open('r').readlines()]
+    tokenizer.add_tokens(vocab)
 
 
 def load_data(fname: PosixPath,
