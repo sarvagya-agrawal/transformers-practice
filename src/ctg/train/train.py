@@ -11,7 +11,6 @@ from pathlib import Path
 import logging
 import time
 
-from transformers import EncoderDecoderModel
 
 import torch.multiprocessing as mp
 import torch.distributed as dist
@@ -20,7 +19,7 @@ import numpy as np
 import torch
 import tqdm
 
-from ..data.utils import load_data, right_shift
+from ..data.utils import extend_vocabulary, load_data
 from ..models import get_tokenizer, get_model
 from ..utils.logging import logger, mp_logger
 from ..optim import get_optimizer_scheduler
@@ -76,8 +75,10 @@ class TrainingAgent:
                                        dataset=self.args.data.name,
                                        task=self.args.data.task)
         logger.info("Loading train dataset...")
+        extend_vocabulary(self.tokenizer, fname=Path(self.args.data.train_src))
+        extend_vocabulary(self.tokenizer, fname=Path(self.args.data.valid_src))
         self.train_loader, self.train_sampler = load_data(
-            src_fname=Path(self.args.data.train_src),
+            fname=Path(self.args.data.train_src),
             tokenizer=self.tokenizer,
             cache_dir=self.args.io.cache_dir,
             max_samples=self.args.data.max_train_samples,
@@ -89,7 +90,7 @@ class TrainingAgent:
             distributed=self.args.distributed)
         logger.info("Loading validation dataset...")
         self.val_loader, self.val_sampler = load_data(
-            src_fname=Path(self.args.data.val_src),
+            fname=Path(self.args.data.val_src),
             tokenizer=self.tokenizer,
             cache_dir=self.args.io.cache_dir,
             max_samples=self.args.data.max_val_samples,

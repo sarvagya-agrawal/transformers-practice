@@ -6,8 +6,10 @@
 from typing import List, Union, Dict, Tuple
 from pathlib import PosixPath
 
-import torch
 import numpy as np
+import spacy
+import torch
+import json
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 # from transformers import LineByLineTextDataset
@@ -66,7 +68,21 @@ class LineByLineTextDataset(Dataset):
                 torch.LongTensor(self.masks[i]))
 
 
-def load_data(src_fname: PosixPath,
+def extend_vocabulary(tokenizer, fname: PosixPath) -> None:
+    spacy_en = spacy.load('en_core_web_sm')
+    if fname.suffix not in set(['.json']) or not fname.exists():
+        raise ValueError(f"Unknown src file {fname}. Files must be",
+                         " .json files")
+    with fname.open('r') as f:
+        data = json.load(f)
+    for line in data['data']:
+        tokenizer.add_tokens(
+            [tok.text for tok in spacy_en.tokenizer(line['src'])])
+        tokenizer.add_tokens(
+            [tok.text for tok in spacy_en.tokenizer(line['tgt'])])
+
+
+def load_data(fname: PosixPath,
               tokenizer: PreTrainedTokenizerBase,
               max_length: int,
               batch_size: int,
@@ -77,15 +93,15 @@ def load_data(src_fname: PosixPath,
               split: str = 'train',
               prefix: str = '',
               distributed: bool = False) -> None:
-    if src_fname.suffix not in set(['.json']) or not src_fname.exists():
-        raise ValueError(f"Unknown src file {src_fname}. Files must be",
+    if fname.suffix not in set(['.json']) or not fname.exists():
+        raise ValueError(f"Unknown src file {fname}. Files must be",
                          " .json files")
     dataset = load_dataset('json',
-                           data_files={split: str(src_fname)},
+                           data_files={split: str(fname)},
                            field='data',
                            cache_dir=cache_dir,
                            split=split)
-    # dataset = LineByLineTextDataset(tokenizer, file_path=str(src_fname),
+    # dataset = LineByLineTextDataset(tokenizer, file_path=str(fname),
     #                                 max_length=max_length)
 
     logger.info("Loading data")

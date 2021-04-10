@@ -18,8 +18,8 @@ mask: False
 
 # Data Parameters
 name: smcalflow
-train-src: _test-dataset/train.json
-val-src: _test-dataset/valid.json
+train-src: /home/mat/archive/datasets/smcalflow/prepared-context2/train.json
+val-src: /home/mat/archive/datasets/smcalflow/prepared-context2/valid.json
 task: nmt
 overwrite_cache: True
 num-workers: 4
@@ -27,7 +27,7 @@ max-train-samples: 100
 max-val-samples: 100
 
 # io
-output: _test-output
-checkpoint: _test-checkpoint
-cache-dir: _test-cache
+output: /home/mat/archive/playground/_test-output
+checkpoint: /home/mat/archive/playground/_test-checkpoint
+cache-dir: /home/mat/archive/playground/_test-cache
 save-freq: 1

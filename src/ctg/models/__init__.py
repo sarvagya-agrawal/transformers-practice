@@ -56,13 +56,13 @@ def get_tokenizer(tokenizer_name: str,
                 {'eos_token': '<|endoftext|>'})
     if tokenizer._pad_token is None:
         tokenizer.add_special_tokens(
-            {'pad_token': '[PAD]'})
+            {'pad_token': '<pad>'})
     if tokenizer._bos_token is None:
         tokenizer.add_special_tokens(
-            {'bos_token': '[BOS]'})
+            {'bos_token': '<bos>'})
     if tokenizer._eos_token is None:
         tokenizer.add_special_tokens(
-            {'eos_token': '[EOS]'})
+            {'eos_token': '<eos>'})
         # tokenizer.pad_token = 0.
     return tokenizer
 
