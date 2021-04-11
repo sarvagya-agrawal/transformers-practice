@@ -29,6 +29,7 @@ def decode_args(sub_parser: ArgumentParser) -> None:
     data_group = sub_parser.add_argument_group('data')
     data_group.add_argument("--name", type=str, choices=DATASETS)
     data_group.add_argument("--src", type=str)
+    data_group.add_argument("--vocab", type=str)
     data_group.add_argument("--task", type=str, choices=TASKS)
     data_group.add_argument("--overwrite-cache", type=str)
     data_group.add_argument("--num-workers", type=int, default=4)

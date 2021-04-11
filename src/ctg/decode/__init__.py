@@ -12,8 +12,8 @@ from transformers import EncoderDecoderModel
 import torch
 import tqdm
 
+from ..data.utils import load_data, extend_vocabulary
 from ..models import get_model, get_tokenizer
-from ..data.utils import load_data
 from ..utils.io import create_dir
 
 DECODE_METHODS = ['greedy', 'beam']
@@ -50,7 +50,7 @@ def get_decoder(method: str) -> callable:
             outputs = model.generate(
                 inputs,
                 max_length=beam_depth,
-                num_beam=beam_width, early_stopping=True,
+                num_beams=beam_width, early_stopping=True,
                 num_return_sequences=beam_width)
             return outputs
         return beam_search
@@ -60,25 +60,28 @@ def get_decoder(method: str) -> callable:
 
 
 def main(args: Namespace) -> None:
+    tokenizer = get_tokenizer(tokenizer_name=args.decode.tokenizer,
+                              cache_dir=args.io.cache_dir,
+                              dataset=args.data.name,
+                              task=args.data.task)
+    # extend_vocabulary(tokenizer, fname=Path(args.data.vocab))
     model = get_model(args.decode.model,
                       weights=args.decode.weights,
                       cache_dir=args.io.cache_dir,
+                      tokenizer_len=len(tokenizer),
                       pretrained=True,
                       task=args.data.task)
     model.eval()
     device = torch.device('cuda', args.gpu)
     model.to(device)
-    tokenizer = get_tokenizer(tokenizer_name=args.decode.tokenizer,
-                              cache_dir=args.io.cache_dir,
-                              dataset=args.data.name,
-                              task=args.data.task)
     break_tokens = tokenizer.encode(tokenizer._eos_token)
     decoder = get_decoder(method=args.decode.method)
     data_loader, sampler = load_data(
-        src_fname=Path(args.data.src),
+        fname=Path(args.data.src),
         tokenizer=tokenizer,
         max_length=args.decode.max_length,
         max_samples=args.decode.max_samples,
+        task=args.data.task,
         batch_size=args.decode.batch_size,
         cache_dir=args.io.cache_dir,
         prefix=args.data.prefix,
@@ -94,6 +97,8 @@ def main(args: Namespace) -> None:
                       desc='Decoding')):
         inputs = batch['input_ids'].to(
             device, non_blocking=True)
+        # print(tokenizer.batch_decode(inputs, skip_special_tokens=True))
+        # break
         if args.decode.method == 'greedy':
             outputs = decoder(model, inputs,
                               max_length=args.decode.max_length,

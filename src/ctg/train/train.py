@@ -211,6 +211,8 @@ class TrainingAgent:
         else:
             torch.save(model_to_save.state_dict(),
                        str(self.checkpoint_dir / stamp))
+        self.tokenizer.save_pretrained(str(self.checkpoint / stamp))
+        self.tokenizer.save_vocabulary(str(self.checkpoint / stamp))
         torch.save({
             'args': self.args,
             'epoch': epoch,
