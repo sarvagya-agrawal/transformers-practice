@@ -12,6 +12,7 @@ import logging
 import time
 
 from torch.optim.lr_scheduler import LambdaLR, StepLR
+from transformers import PreTrainedTokenizerFast
 
 import torch.multiprocessing as mp
 import torch.distributed as dist
@@ -72,8 +73,8 @@ class TrainingAgent:
         logger.info(f"Grabbing tokenizer: {self.args.train.tokenizer}")
         if self.args.rank not in set([-1, 0]):
             dist.barrier()
-        if self.args.rank == 0:
-            if not self.args.train.tokenizer_pretrained:
+        if not self.args.train.tokenizer_pretrained:
+            if self.args.rank == 0 or not self.args.distributed:
                 (self.cache_dir /
                  f'{self.args.train.tokenizer}_custom.json').unlink()
         self.tokenizer = get_tokenizer(
@@ -119,6 +120,15 @@ class TrainingAgent:
 
     def reset(self) -> None:
         logger.info("Starting trial reset...")
+        if self.args.distributed:
+            self.args.train.batch_size = int(self.args.train.batch_size /
+                                             self.args.ngpus_per_node)
+            self.args.data.num_workers = int((self.args.data.num_workers +
+                                              self.args.ngpus_per_node - 1) /
+                                             self.args.ngpus_per_node)
+
+        logger.info(f"Grabbing tokenizer: {self.args.train.tokenizer}")
+        logger.info("Extending vocab...")
         logger.info("Loading model...")
         # if self.args.rank not in set([-1, 0]):
         #     dist.barrier()
@@ -130,15 +140,6 @@ class TrainingAgent:
                                    tokenizer_len=len(self.tokenizer),
                                    pretrained=self.args.train.model_pretrained,
                                    task=self.args.data.task)
-            self.load_data()
-            self.optimizer, self.scheduler = get_optimizer_scheduler(
-                optim_method=self.args.train.optimizer,
-                scheduler_method=self.args.train.scheduler,
-                net_parameters=self.model.parameters(),
-                max_epochs=self.args.train.max_epochs,
-                train_loader_len=len(self.train_loader),
-                optimizer_kwargs=self.args.train.optimizer_kwargs,
-                scheduler_kwargs=self.args.train.scheduler_kwargs)
         logger.info("Loading train dataset...")
         # self.model.resize_token_embeddings(len(self.tokenizer))
         # if self.args.rank == 0:
@@ -162,6 +163,15 @@ class TrainingAgent:
         elif isinstance(self.gpu, int):
             torch.cuda.set_device(self.gpu)
             self.model = self.model.cuda(self.gpu)
+        self.load_data()
+        self.optimizer, self.scheduler = get_optimizer_scheduler(
+            optim_method=self.args.train.optimizer,
+            scheduler_method=self.args.train.scheduler,
+            net_parameters=self.model.parameters(),
+            max_epochs=self.args.train.max_epochs,
+            train_loader_len=len(self.train_loader),
+            optimizer_kwargs=self.args.train.optimizer_kwargs,
+            scheduler_kwargs=self.args.train.scheduler_kwargs)
         logger.info(f"Setting model to {self.device}")
         # if len(self.args.train.gpu) > 1:
         #     self.model = torch.nn.DataParallel(self.model)
@@ -190,10 +200,13 @@ class TrainingAgent:
             self.reset()
             return
         self.args.train.model_pretrained = True
-        train_state = torch.load(str(path / 'train_state.pt'))
+        train_state = torch.load(str(path / 'train_state.pt'),
+                                 map_location=self.device)
         # train_state['args'].io.resume = self.args.io.resume
         # if self.args != train_state['args']:
         #     raise ValueError("Checkpoint args and config args don't match")
+        # self.tokenizer = PreTrainedTokenizerFast(
+        #     tokenizer_file=str(self.args.io.resume / 'tokenizer.json'))
         self.model = get_model(
             self.args.train.model,
             cache_dir=self.args.io.cache_dir,
@@ -201,6 +214,24 @@ class TrainingAgent:
             pretrained=True,
             weights=str(path),
             task=self.args.data.task)
+        if self.args.distributed:
+            if self.gpu is not None:
+                self.model.to(self.device)
+                self.model = torch.nn.parallel.DistributedDataParallel(
+                    self.model,
+                    device_ids=[self.gpu],
+                    find_unused_parameters=True)
+            else:
+                self.model.cuda()
+                self.model = torch.nn.parallel.DistributedDataParallel(
+                    self.model,
+                    find_unused_parameters=True)
+        elif isinstance(self.gpu, list):
+            self.model = torch.nn.DataParallel(self.model)
+            self.model.to(self.device)
+        elif isinstance(self.gpu, int):
+            torch.cuda.set_device(self.gpu)
+            self.model = self.model.cuda(self.gpu)
         self.load_data()
         self.optimizer, self.scheduler = get_optimizer_scheduler(
             optim_method=self.args.train.optimizer,
@@ -224,8 +255,9 @@ class TrainingAgent:
         else:
             torch.save(model_to_save.state_dict(),
                        str(self.checkpoint_dir / stamp))
-        self.tokenizer.save_pretrained(str(self.checkpoint / stamp))
-        self.tokenizer.save_vocabulary(str(self.checkpoint / stamp))
+        # self.tokenizer.save_pretrained(str(self.checkpoint_dir / stamp))
+        # self.tokenizer.save_vocabulary(str(self.checkpoint_dir / stamp))
+        # self.tokenizer.save(str(self.checkpoint_dir / 'tokenizer.json'))
         torch.save({
             'args': self.args,
             'epoch': epoch,

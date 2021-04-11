@@ -140,7 +140,7 @@ def load_data(fname: PosixPath,
         # batch_size=batch_size,
         load_from_cache_file=not overwrite_cache
     )
-    dataset.set_format(type='torch')
+    # dataset.set_format(type='torch')
     if not distributed:
         sampler = RandomSampler(dataset) if split == 'train'\
             else SequentialSampler(dataset)

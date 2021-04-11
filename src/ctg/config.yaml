@@ -1,7 +1,7 @@
 # Train parameters
-model: bert-base-uncased
+model: t5-small
 tokenizer: BPE
-model-pretrained: True
+model-pretrained: False
 tokenizer-pretrained: False
 optimizer: Adam
 scheduler: StepLR
