@@ -45,13 +45,14 @@ def get_tokenizer(tokenizer_name: str,
             raise ValueError(f'Unknown tokenizer. Must be one of {TOKENIZERS}')
     else:
         if tokenizer_name == 'BPE':
-            tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
-            trainer = BpeTrainer(
-                special_tokens=["[UNK]", "[BOS]", "[EOS]",
-                                "[SEP]", "[PAD]", "[MASK]"])
-            tokenizer.pre_tokenizer = Whitespace()
-            tokenizer.train(datasets, trainer)
-            tokenizer.save(cache_dir + "/" + 'BPE_custom.json')
+            if not (Path(cache_dir) / 'BPE_custom.json').exists():
+                tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
+                trainer = BpeTrainer(
+                    special_tokens=["[UNK]", "[BOS]", "[EOS]",
+                                    "[SEP]", "[PAD]", "[MASK]"])
+                tokenizer.pre_tokenizer = Whitespace()
+                tokenizer.train(datasets, trainer)
+                tokenizer.save(cache_dir + "/" + 'BPE_custom.json')
             tokenizer = PreTrainedTokenizerFast(
                 tokenizer_file=cache_dir + "/" + 'BPE_custom.json')
 
