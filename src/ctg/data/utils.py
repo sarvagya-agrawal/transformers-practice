@@ -15,6 +15,7 @@ from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 # from transformers import LineByLineTextDataset
 from torch.utils.data import Dataset, DataLoader, \
     RandomSampler, SequentialSampler
+from transformers import DataCollatorForSeq2Seq
 from torch.nn.utils.rnn import pad_sequence
 from datasets import load_dataset
 
@@ -78,6 +79,7 @@ def extend_vocabulary(tokenizer, fname: PosixPath) -> None:
 
 def load_data(fname: PosixPath,
               tokenizer: PreTrainedTokenizerBase,
+              model: torch.nn.Module,
               max_length: int,
               batch_size: int,
               task: str,
@@ -106,8 +108,8 @@ def load_data(fname: PosixPath,
         inputs = [prefix + i for i in inputs]
         inputs = tokenizer(
             inputs,
-            add_special_tokens=True,
-            padding='max_length',
+            # add_special_tokens=True,
+            # padding='max_length',
             max_length=max_length,
             return_tensors='np',
             truncation=True)
@@ -115,8 +117,8 @@ def load_data(fname: PosixPath,
             targets = examples["target"]
             with tokenizer.as_target_tokenizer():
                 targets = tokenizer(targets,
-                                    add_special_tokens=True,
-                                    padding='max_length',
+                                    # add_special_tokens=True,
+                                    # padding='max_length',
                                     max_length=max_length,
                                     return_tensors='np',
                                     truncation=True)
@@ -145,11 +147,16 @@ def load_data(fname: PosixPath,
     else:
         sampler = torch.utils.data.distributed.DistributedSampler(
             dataset, shuffle=split == 'train')
+    if task == 'nmt':
+        data_collator = DataCollatorForSeq2Seq(
+            tokenizer,
+            model=model,
+            label_pad_token_id=-100)
     return DataLoader(
         dataset,
         sampler=sampler,
         batch_size=batch_size,
-        # collate_fn=collate,
+        collate_fn=data_collator,
         pin_memory=False,
         num_workers=num_workers), sampler
 

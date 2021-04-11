@@ -75,39 +75,11 @@ class TrainingAgent:
             self.args.train.tokenizer, self.args.io.cache_dir,
             dataset=self.args.data.name,
             pretrained=self.args.train.tokenizer_pretrained,
-            datasets=[self.args.data.train_src],
+            datasets=self.args.data.tokenizer_files,
             task=self.args.data.task)
         logger.info("Extending vocab...")
-        extend_vocabulary(self.tokenizer, fname=Path(self.args.data.vocab))
+        # extend_vocabulary(self.tokenizer, fname=Path(self.args.data.vocab))
         # extend_vocabulary(self.tokenizer, fname=Path(valid_src))
-        logger.info("Loading train dataset...")
-        self.train_loader, self.train_sampler = load_data(
-            fname=Path(self.args.data.train_src),
-            tokenizer=self.tokenizer,
-            cache_dir=self.args.io.cache_dir,
-            task=self.args.data.task,
-            max_samples=self.args.data.max_train_samples,
-            max_length=self.args.train.max_length,
-            batch_size=self.args.train.batch_size,
-            num_workers=self.args.data.num_workers,
-            overwrite_cache=self.args.data.overwrite_cache,
-            split='train',
-            distributed=self.args.distributed)
-        logger.info("Loading validation dataset...")
-        self.val_loader, self.val_sampler = load_data(
-            fname=Path(self.args.data.val_src),
-            tokenizer=self.tokenizer,
-            cache_dir=self.args.io.cache_dir,
-            task=self.args.data.task,
-            max_samples=self.args.data.max_val_samples,
-            max_length=self.args.train.max_length,
-            batch_size=self.args.train.batch_size,
-            num_workers=self.args.data.num_workers,
-            overwrite_cache=self.args.data.overwrite_cache,
-            split='val',
-            distributed=self.args.distributed)
-        # if self.args.rank == 0:
-        #     dist.barrier()
 
     def reset(self) -> None:
         logger.info("Starting trial reset...")
@@ -130,6 +102,34 @@ class TrainingAgent:
                 train_loader_len=len(self.train_loader),
                 optimizer_kwargs=self.args.train.optimizer_kwargs,
                 scheduler_kwargs=self.args.train.scheduler_kwargs)
+        logger.info("Loading train dataset...")
+        self.train_loader, self.train_sampler = load_data(
+            fname=Path(self.args.data.train_src),
+            tokenizer=self.tokenizer,
+            model=self.model,
+            cache_dir=self.args.io.cache_dir,
+            task=self.args.data.task,
+            max_samples=self.args.data.max_train_samples,
+            max_length=self.args.train.max_length,
+            batch_size=self.args.train.batch_size,
+            num_workers=self.args.data.num_workers,
+            overwrite_cache=self.args.data.overwrite_cache,
+            split='train',
+            distributed=self.args.distributed)
+        logger.info("Loading validation dataset...")
+        self.val_loader, self.val_sampler = load_data(
+            fname=Path(self.args.data.val_src),
+            tokenizer=self.tokenizer,
+            model=self.model,
+            cache_dir=self.args.io.cache_dir,
+            task=self.args.data.task,
+            max_samples=self.args.data.max_val_samples,
+            max_length=self.args.train.max_length,
+            batch_size=self.args.train.batch_size,
+            num_workers=self.args.data.num_workers,
+            overwrite_cache=self.args.data.overwrite_cache,
+            split='val',
+            distributed=self.args.distributed)
         # self.model.resize_token_embeddings(len(self.tokenizer))
         # if self.args.rank == 0:
         #     dist.barrier()

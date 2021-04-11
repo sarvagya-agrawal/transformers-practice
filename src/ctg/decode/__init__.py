@@ -79,6 +79,7 @@ def main(args: Namespace) -> None:
     data_loader, sampler = load_data(
         fname=Path(args.data.src),
         tokenizer=tokenizer,
+        model=model,
         max_length=args.decode.max_length,
         max_samples=args.decode.max_samples,
         task=args.data.task,

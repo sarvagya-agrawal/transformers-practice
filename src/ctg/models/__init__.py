@@ -50,13 +50,7 @@ def get_tokenizer(tokenizer_name: str,
                 special_tokens=["[UNK]", "[BOS]", "[EOS]",
                                 "[SEP]", "[PAD]", "[MASK]"])
             tokenizer.pre_tokenizer = Whitespace()
-            tokenizer.train([
-                '/home/mat/archive/datasets/smcalflow/prepared-context2/train.src',
-                '/home/mat/archive/datasets/smcalflow/prepared-context2/train.tgt',
-                '/home/mat/archive/datasets/smcalflow/prepared-context2/valid.src',
-                '/home/mat/archive/datasets/smcalflow/prepared-context2/valid.tgt',
-            ],
-                trainer)
+            tokenizer.train(datasets, trainer)
             tokenizer.save(cache_dir + "/" + 'BPE_custom.json')
             tokenizer = PreTrainedTokenizerFast(
                 tokenizer_file=cache_dir + "/" + 'BPE_custom.json')

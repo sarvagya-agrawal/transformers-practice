@@ -42,6 +42,7 @@ def train_args(sub_parser: ArgumentParser) -> None:
     data_group.add_argument("--max-train-samples", type=int, default=-1)
     data_group.add_argument("--max-val-samples", type=int, default=-1)
     data_group.add_argument("--prefix", type=str, default='')
+    data_group.add_argument("--tokenizer-files", default=None, nargs="+")
 
     io_group = sub_parser.add_argument_group('io')
     io_group.add_argument("--output", type=str)

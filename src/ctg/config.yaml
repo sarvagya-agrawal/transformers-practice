@@ -28,6 +28,7 @@ overwrite_cache: True
 num-workers: 4
 max-train-samples: 100
 max-val-samples: 100
+tokenizer-files: [/home/mat/archive/datasets/smcalflow/prepared-context2/train.src]
 
 # io
 output: /home/mat/archive/playground/_test-output
