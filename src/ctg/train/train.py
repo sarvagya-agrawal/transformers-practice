@@ -57,7 +57,7 @@ class TrainingAgent:
             self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.output_dir = create_dir(Path(self.args.io.output))
         self.checkpoint_dir = create_dir(Path(self.args.io.checkpoint))
-        self.cache_dir = create_dir(Path(self.args.io.cache))
+        self.cache_dir = create_dir(Path(self.args.io.cache_dir))
         self.setup()
         logger.info("Training Agent initialized")
 
