@@ -109,7 +109,7 @@ def load_data(fname: PosixPath,
         inputs = tokenizer(
             inputs,
             # add_special_tokens=True,
-            # padding='max_length',
+            padding='max_length',
             max_length=max_length,
             return_tensors='np',
             truncation=True)
@@ -118,7 +118,7 @@ def load_data(fname: PosixPath,
             with tokenizer.as_target_tokenizer():
                 targets = tokenizer(targets,
                                     # add_special_tokens=True,
-                                    # padding='max_length',
+                                    padding='max_length',
                                     max_length=max_length,
                                     return_tensors='np',
                                     truncation=True)
@@ -140,7 +140,7 @@ def load_data(fname: PosixPath,
         # batch_size=batch_size,
         load_from_cache_file=not overwrite_cache
     )
-    # dataset.set_format(type='torch')
+    dataset.set_format(type='torch')
     if not distributed:
         sampler = RandomSampler(dataset) if split == 'train'\
             else SequentialSampler(dataset)
@@ -156,7 +156,7 @@ def load_data(fname: PosixPath,
         dataset,
         sampler=sampler,
         batch_size=batch_size,
-        collate_fn=data_collator,
+        # collate_fn=data_collator,
         pin_memory=False,
         num_workers=num_workers), sampler
 

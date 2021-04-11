@@ -6,6 +6,8 @@
 from pathlib import Path
 from typing import List
 
+import time
+
 # BertTokenizer, OpenAIGPTTokenizer, GPT2Tokenizer, AlbertTokenizer
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from transformers import (
@@ -45,16 +47,17 @@ def get_tokenizer(tokenizer_name: str,
             raise ValueError(f'Unknown tokenizer. Must be one of {TOKENIZERS}')
     else:
         if tokenizer_name == 'BPE':
-            if not (Path(cache_dir) / 'BPE_custom.json').exists():
-                tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
-                trainer = BpeTrainer(
-                    special_tokens=["[UNK]", "[BOS]", "[EOS]",
-                                    "[SEP]", "[PAD]", "[MASK]"])
-                tokenizer.pre_tokenizer = Whitespace()
-                tokenizer.train(datasets, trainer)
-                tokenizer.save(cache_dir + "/" + 'BPE_custom.json')
+            # if not (Path(cache_dir) / 'BPE_custom.json').exists():
+            tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
+            trainer = BpeTrainer(
+                special_tokens=["[UNK]", "[BOS]", "[EOS]",
+                                "[SEP]", "[PAD]", "[MASK]"])
+            tokenizer.pre_tokenizer = Whitespace()
+            tokenizer.train(datasets, trainer)
+            stamp = time.time()
+            tokenizer.save(cache_dir + "/" + f'BPE_custom_{stamp}.json')
             tokenizer = PreTrainedTokenizerFast(
-                tokenizer_file=cache_dir + "/" + 'BPE_custom.json')
+                tokenizer_file=cache_dir + "/" + f'BPE_custom_{stamp}.json')
 
     if dataset == 'multiwoz2.1':
         if task == 'clm':

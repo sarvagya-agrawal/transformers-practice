@@ -71,20 +71,20 @@ class TrainingAgent:
                                              self.args.ngpus_per_node)
 
         logger.info(f"Grabbing tokenizer: {self.args.train.tokenizer}")
-        if self.args.rank not in set([-1, 0]):
-            dist.barrier()
-        if not self.args.train.tokenizer_pretrained:
-            if self.args.rank == 0 or not self.args.distributed:
-                (self.cache_dir /
-                 f'{self.args.train.tokenizer}_custom.json').unlink()
+        # if self.args.rank not in set([-1, 0]):
+        #     dist.barrier()
+        # if not self.args.train.tokenizer_pretrained:
+        #     if self.args.rank == 0 or not self.args.distributed:
+        #         (self.cache_dir /
+        #          f'{self.args.train.tokenizer}_custom.json').unlink()
         self.tokenizer = get_tokenizer(
             self.args.train.tokenizer, self.args.io.cache_dir,
             dataset=self.args.data.name,
             pretrained=self.args.train.tokenizer_pretrained,
             datasets=self.args.data.tokenizer_files,
             task=self.args.data.task)
-        if self.args.rank == 0:
-            dist.barrier()
+        # if self.args.rank == 0:
+        #     dist.barrier()
         logger.info("Extending vocab...")
         # extend_vocabulary(self.tokenizer, fname=Path(self.args.data.vocab))
         # extend_vocabulary(self.tokenizer, fname=Path(valid_src))
