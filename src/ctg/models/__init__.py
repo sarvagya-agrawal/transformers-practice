@@ -4,6 +4,7 @@
 @email: tuli.mathieu@gmail.com
 """
 from pathlib import Path
+from typing import List
 
 # BertTokenizer, OpenAIGPTTokenizer, GPT2Tokenizer, AlbertTokenizer
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
@@ -13,14 +14,19 @@ from transformers import (
     T5ForConditionalGeneration, T5Config,
     EncoderDecoderModel, EncoderDecoderConfig,
     BertConfig, BertModel, BertForMaskedLM, BertLMHeadModel,
+    PreTrainedTokenizerFast
 )
+from tokenizers.pre_tokenizers import Whitespace
+from tokenizers.trainers import BpeTrainer
+from tokenizers import Tokenizer
+from tokenizers.models import BPE
 
 import torch
 
 from .configs import CONFIG_DICTS
 
 TOKENIZERS = set(['bert-base-uncased', 'openai-gpt',
-                  'gpt2', 'bert-base-uncased', 't5-small'])
+                  'gpt2', 'bert-base-uncased', 't5-small', 'BPE'])
 MODELS = set(['gpt2', 'distilgpt2', 'bert-base-uncased', 't5-small'])
 
 
@@ -28,24 +34,33 @@ def get_tokenizer(tokenizer_name: str,
                   cache_dir: Path,
                   dataset: str,
                   task: str,
+                  pretrained: True,
+                  datasets: List[str] = None,
                   lower_case: bool = True) -> PreTrainedTokenizerBase:
-    # if tokenizer_name == 'bert-base-uncased':
-    #     tokenizer = BertTokenizer.from_pretrained(
-    #         tokenizer_name, cache_dir=cache_dir)
-    # elif tokenizer_name == 'openai-gpt':
-    #     tokenizer = OpenAIGPTTokenizer.from_pretrained(
-    #         tokenizer_name, cache_dir=cache_dir)
-    # elif tokenizer_name == 'gpt2':
-    #     tokenizer = GPT2Tokenizer.from_pretrained(
-    #         tokenizer_name, cache_dir=cache_dir)
-    # elif tokenizer_name == 'albert-base-v2':
-    #     tokenizer = AlbertTokenizer.from_pretrained(
-    #         tokenizer_name, cache_dir=cache_dir)
-    if tokenizer_name in TOKENIZERS:
-        tokenizer = AutoTokenizer.from_pretrained(tokenizer_name,
-                                                  cache_dir=cache_dir)
+    if pretrained:
+        if tokenizer_name in TOKENIZERS:
+            tokenizer = AutoTokenizer.from_pretrained(tokenizer_name,
+                                                      cache_dir=cache_dir)
+        else:
+            raise ValueError(f'Unknown tokenizer. Must be one of {TOKENIZERS}')
     else:
-        raise ValueError(f'Unknown tokenizer. Must be one of {TOKENIZERS}')
+        if tokenizer_name == 'BPE':
+            tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
+            trainer = BpeTrainer(
+                special_tokens=["[UNK]", "[BOS]", "[EOS]",
+                                "[SEP]", "[PAD]", "[MASK]"])
+            tokenizer.pre_tokenizer = Whitespace()
+            tokenizer.train([
+                '/home/mat/archive/datasets/smcalflow/prepared-context2/train.src',
+                '/home/mat/archive/datasets/smcalflow/prepared-context2/train.tgt',
+                '/home/mat/archive/datasets/smcalflow/prepared-context2/valid.src',
+                '/home/mat/archive/datasets/smcalflow/prepared-context2/valid.tgt',
+            ],
+                trainer)
+            tokenizer.save(cache_dir + "/" + 'BPE_custom.json')
+            tokenizer = PreTrainedTokenizerFast(
+                tokenizer_file=cache_dir + "/" + 'BPE_custom.json')
+
     if dataset == 'multiwoz2.1':
         if task == 'clm':
             tokenizer.add_special_tokens(
@@ -54,14 +69,16 @@ def get_tokenizer(tokenizer_name: str,
                 {'eos_token': '<|endoftext|>'})
     if tokenizer._pad_token is None:
         tokenizer.add_special_tokens(
-            {'pad_token': '<pad>'})
+            {'pad_token': '[PAD]'})
     if tokenizer._bos_token is None:
         tokenizer.add_special_tokens(
-            {'bos_token': '<bos>'})
+            {'bos_token': '[BOS]'})
     if tokenizer._eos_token is None:
         tokenizer.add_special_tokens(
-            {'eos_token': '<eos>'})
-        # tokenizer.pad_token = 0.
+            {'eos_token': '[EOS]'})
+    if tokenizer._mask_token is None:
+        tokenizer.add_special_tokens(
+            {'eos_token': '[MASK]'})
     return tokenizer
 
 

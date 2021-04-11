@@ -15,8 +15,9 @@ from ..data import DATASETS, TASKS
 def train_args(sub_parser: ArgumentParser) -> None:
     train_group = sub_parser.add_argument_group('train')
     train_group.add_argument("--model", type=str, choices=MODELS)
-    train_group.add_argument("--pretrained", type=bool, default=True)
+    train_group.add_argument("--model-pretrained", type=bool, default=True)
     train_group.add_argument("--tokenizer", type=str, choices=TOKENIZERS)
+    train_group.add_argument("--tokenizer-pretrained", type=bool, default=True)
     # train_group.add_argument("--gpu", nargs="+")
     train_group.add_argument("--optimizer", type=str, choices=OPTIMIZERS)
     train_group.add_argument("--scheduler", type=str, choices=SCHEDULERS)

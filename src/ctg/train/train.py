@@ -71,10 +71,12 @@ class TrainingAgent:
         logger.info(f"Grabbing tokenizer: {self.args.train.tokenizer}")
         # if self.args.rank not in set([-1, 0]):
         #     dist.barrier()
-        self.tokenizer = get_tokenizer(self.args.train.tokenizer,
-                                       self.args.io.cache_dir,
-                                       dataset=self.args.data.name,
-                                       task=self.args.data.task)
+        self.tokenizer = get_tokenizer(
+            self.args.train.tokenizer, self.args.io.cache_dir,
+            dataset=self.args.data.name,
+            pretrained=self.args.train.tokenizer_pretrained,
+            datasets=[self.args.data.train_src],
+            task=self.args.data.task)
         logger.info("Extending vocab...")
         extend_vocabulary(self.tokenizer, fname=Path(self.args.data.vocab))
         # extend_vocabulary(self.tokenizer, fname=Path(valid_src))
@@ -118,7 +120,7 @@ class TrainingAgent:
             self.model = get_model(self.args.train.model,
                                    cache_dir=self.args.io.cache_dir,
                                    tokenizer_len=len(self.tokenizer),
-                                   pretrained=self.args.train.pretrained,
+                                   pretrained=self.args.train.model_pretrained,
                                    task=self.args.data.task)
             self.optimizer, self.scheduler = get_optimizer_scheduler(
                 optim_method=self.args.train.optimizer,
@@ -177,7 +179,7 @@ class TrainingAgent:
             self.args.io.resume = None
             self.reset()
             return
-        self.args.train.pretrained = True
+        self.args.train.model_pretrained = True
         train_state = torch.load(str(path / 'train_state.pt'))
         # train_state['args'].io.resume = self.args.io.resume
         # if self.args != train_state['args']:
@@ -361,6 +363,8 @@ def main(args: Namespace) -> None:
     args.ngpus_per_node = ngpus_per_node = torch.cuda.device_count() if \
         args.gpu is None else 1 if isinstance(args.gpu, int) else len(args.gpu)
     args.distributed = (args.mpd or args.world_size > 1) and not args.cpu
+    if args.gpu is None and not args.distributed:
+        raise ValueError("Must specify gpu or distributed")
     logger.info(f"GPU: {args.gpu}")
     logger.info(f"NGPUS: {ngpus_per_node}")
     if args.mpd and not args.cpu:

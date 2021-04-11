@@ -1,7 +1,8 @@
 # Train parameters
 model: bert-base-uncased
-tokenizer: bert-base-uncased
-pretrained: True
+tokenizer: BPE
+model-pretrained: True
+tokenizer-pretrained: False
 optimizer: Adam
 scheduler: StepLR
 batch-size: 1
