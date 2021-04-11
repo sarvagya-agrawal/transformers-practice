@@ -88,28 +88,7 @@ class TrainingAgent:
         # extend_vocabulary(self.tokenizer, fname=Path(self.args.data.vocab))
         # extend_vocabulary(self.tokenizer, fname=Path(valid_src))
 
-    def reset(self) -> None:
-        logger.info("Starting trial reset...")
-        logger.info("Loading model...")
-        # if self.args.rank not in set([-1, 0]):
-        #     dist.barrier()
-        if self.args.io.resume is not None:
-            self.load_checkpoint(Path(self.args.io.resume))
-        else:
-            self.model = get_model(self.args.train.model,
-                                   cache_dir=self.args.io.cache_dir,
-                                   tokenizer_len=len(self.tokenizer),
-                                   pretrained=self.args.train.model_pretrained,
-                                   task=self.args.data.task)
-            self.optimizer, self.scheduler = get_optimizer_scheduler(
-                optim_method=self.args.train.optimizer,
-                scheduler_method=self.args.train.scheduler,
-                net_parameters=self.model.parameters(),
-                max_epochs=self.args.train.max_epochs,
-                train_loader_len=len(self.train_loader),
-                optimizer_kwargs=self.args.train.optimizer_kwargs,
-                scheduler_kwargs=self.args.train.scheduler_kwargs)
-        logger.info("Loading train dataset...")
+    def load_data(self) -> None:
         self.train_loader, self.train_sampler = load_data(
             fname=Path(self.args.data.train_src),
             tokenizer=self.tokenizer,
@@ -137,6 +116,30 @@ class TrainingAgent:
             overwrite_cache=self.args.data.overwrite_cache,
             split='val',
             distributed=self.args.distributed)
+
+    def reset(self) -> None:
+        logger.info("Starting trial reset...")
+        logger.info("Loading model...")
+        # if self.args.rank not in set([-1, 0]):
+        #     dist.barrier()
+        if self.args.io.resume is not None:
+            self.load_checkpoint(Path(self.args.io.resume))
+        else:
+            self.model = get_model(self.args.train.model,
+                                   cache_dir=self.args.io.cache_dir,
+                                   tokenizer_len=len(self.tokenizer),
+                                   pretrained=self.args.train.model_pretrained,
+                                   task=self.args.data.task)
+            self.load_data()
+            self.optimizer, self.scheduler = get_optimizer_scheduler(
+                optim_method=self.args.train.optimizer,
+                scheduler_method=self.args.train.scheduler,
+                net_parameters=self.model.parameters(),
+                max_epochs=self.args.train.max_epochs,
+                train_loader_len=len(self.train_loader),
+                optimizer_kwargs=self.args.train.optimizer_kwargs,
+                scheduler_kwargs=self.args.train.scheduler_kwargs)
+        logger.info("Loading train dataset...")
         # self.model.resize_token_embeddings(len(self.tokenizer))
         # if self.args.rank == 0:
         #     dist.barrier()
@@ -198,6 +201,7 @@ class TrainingAgent:
             pretrained=True,
             weights=str(path),
             task=self.args.data.task)
+        self.load_data()
         self.optimizer, self.scheduler = get_optimizer_scheduler(
             optim_method=self.args.train.optimizer,
             scheduler_method=self.args.train.scheduler,
