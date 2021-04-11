@@ -88,6 +88,7 @@ class TrainingAgent:
         logger.info("Extending vocab...")
         # extend_vocabulary(self.tokenizer, fname=Path(self.args.data.vocab))
         # extend_vocabulary(self.tokenizer, fname=Path(valid_src))
+        self.load_data()
 
     def load_data(self) -> None:
         self.train_loader, self.train_sampler = load_data(
@@ -163,7 +164,7 @@ class TrainingAgent:
         elif isinstance(self.gpu, int):
             torch.cuda.set_device(self.gpu)
             self.model = self.model.cuda(self.gpu)
-        self.load_data()
+        # self.load_data()
         self.optimizer, self.scheduler = get_optimizer_scheduler(
             optim_method=self.args.train.optimizer,
             scheduler_method=self.args.train.scheduler,
@@ -232,7 +233,7 @@ class TrainingAgent:
         elif isinstance(self.gpu, int):
             torch.cuda.set_device(self.gpu)
             self.model = self.model.cuda(self.gpu)
-        self.load_data()
+        # self.load_data()
         self.optimizer, self.scheduler = get_optimizer_scheduler(
             optim_method=self.args.train.optimizer,
             scheduler_method=self.args.train.scheduler,

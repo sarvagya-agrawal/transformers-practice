@@ -3,19 +3,18 @@ model: t5-small
 tokenizer: BPE
 model-pretrained: False
 tokenizer-pretrained: False
-optimizer: Adam
-scheduler: StepLR
-batch-size: 1
+optimizer: AdamW
+scheduler: LinearLambdaLR
+batch-size: 4
 max-length: 512
 max-epochs: 100
 num-trials: 1
 loss: cross_entropy
 clip-grad: 1.0
 optimizer-kwargs:
-  lr: 2
+  lr: 0.0005
 scheduler-kwargs:
-  gamma: 0.5
-  step_size: 10
+  num_warmup_steps: 1500
 mask: False
 
 # Data Parameters
@@ -26,8 +25,8 @@ vocab: /home/mat/archive/datasets/smcalflow/prepared-context2/vocab.txt
 task: nmt
 overwrite_cache: True
 num-workers: 4
-max-train-samples: 100
-max-val-samples: 100
+max-train-samples: 5000
+max-val-samples: 5000
 tokenizer-files:
   - /home/mat/archive/datasets/smcalflow/prepared-context2/train.src
   - /home/mat/archive/datasets/smcalflow/prepared-context2/train.tgt
