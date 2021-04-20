@@ -1,0 +1,49 @@
+save_data: /home/mat/archive/datasets/smcalflow/onmt-built
+src_vocab: /home/mat/archive/datasets/smcalflow/onmt-built/vocab.src
+tgt_vocab: /home/mat/archive/datasets/smcalflow/onmt-built/vocab.tgt
+overwrite: False
+data:
+  corpus:
+    path_src: /home/mat/archive/datasets/smcalflow/prepared-context2/train.src
+    path_tgt: /home/mat/archive/datasets/smcalflow/prepared-context2/train.tgt
+  valid:
+    path_src: /home/mat/archive/datasets/smcalflow/prepared-context2/valid.src
+    path_tgt: /home/mat/archive/datasets/smcalflow/prepared-context2/valid.tgt
+
+queue_size: 10000
+bucket_size: 32768
+world_size: 2
+gpu_ranks: [0, 1]
+batch_type: "tokens"
+batch_size: 128
+valid_batch_size: 8
+max_generator_batches: 2
+accum_count: [4]
+accum_steps: [0]
+
+# Optimization
+model_dtype: "fp32"
+optim: "adam"
+learning_rate: 2
+warmup_steps: 8000
+decay_method: "noam"
+adam_beta2: 0.998
+max_grad_norm: 0
+label_smoothing: 0.1
+param_init: 0
+param_init_glorot: true
+normalization: "tokens"
+
+# Model
+encoder_type: transformer
+decoder_type: transformer
+position_encoding: true
+enc_layers: 6
+dec_layers: 6
+heads: 8
+rnn_size: 512
+word_vec_size: 512
+transformer_ff: 2048
+dropout_steps: [0]
+dropout: [0.1]
+

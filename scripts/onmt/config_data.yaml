@@ -1,0 +1,12 @@
+# for build vocab
+save_data: /home/mat/archive/datasets/smcalflow/onmt-built
+src_vocab: /home/mat/archive/datasets/smcalflow/onmt-built/vocab.src
+tgt_vocab: /home/mat/archive/datasets/smcalflow/onmt-built/vocab.tgt
+overwrite: False
+data:
+  corpus:
+    path_src: /home/mat/archive/datasets/smcalflow/prepared-context2/train.src
+    path_tgt: /home/mat/archive/datasets/smcalflow/prepared-context2/train.tgt
+  valid:
+    path_src: /home/mat/archive/datasets/smcalflow/prepared-context2/valid.src
+    path_tgt: /home/mat/archive/datasets/smcalflow/prepared-context2/valid.tgt

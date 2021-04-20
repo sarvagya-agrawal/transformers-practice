@@ -1,0 +1,41 @@
+# for build vocab
+save_data: onmt-data
+src_vocab: onmt-data/vocab.src_tok
+tgt_vocab: onmt-data/vocab.tgt
+overwrite: False
+data:
+  corpus:
+    path_src: data/train.src
+    path_tgt: data/train.tgt
+  valid:
+    path_src: data/valid.src
+    path_tgt: data/valid.tgt
+# for train
+# src_vocab: /home/mat/archive/datasets/smcalflow/onmt-built/vocab.src
+# tgt_vocab: /home/mat/archive/datasets/smcalflow/onmt-built/vocab.tgt
+world_Size: 1
+gpu_ranks: [0]
+save_model: blstm-checkpoint
+encoder_type: brnn
+decoder_type: rnn
+rnn_type: LSTM
+global_attention: general
+global_attention_function: softmax
+generator_function: softmax
+copy_attn_type: general
+both_embeddings: glove840b/glove.840B.300d.txt
+embeddings_type: "GloVe"
+copy_attn: True
+seed: 1
+optim: adam
+learning_rate: 0.001
+early_stopping: 5
+batch_size: 128
+valid_batch_size: 8
+valid_steps: 200
+save_checkpoint_steps: 200
+word_vec_size: 300
+attention_dropout: 0
+dropout: 0.5
+layers: 2
+rnn_size: 384

@@ -1,0 +1,60 @@
+# for build vocab
+save_data: onmt-data-trans
+src_vocab: onmt-data-trans/vocab.src_tok
+tgt_vocab: onmt-data-trans/vocab.tgt
+overwrite: False
+data:
+  corpus:
+    path_src: data/train.src
+    path_tgt: data/train.tgt
+  valid:
+    path_src: data/valid.src
+    path_tgt: data/valid.tgt
+# for train
+# src_vocab: /home/mat/archive/datasets/smcalflow/onmt-built/vocab.src
+# tgt_vocab: /home/mat/archive/datasets/smcalflow/onmt-built/vocab.tgt
+save_model: transformer-checkpoint
+train_steps: 200000
+valid_steps: 10000
+save_checkpoint_steps: 2000
+
+
+queue_size: 10000
+bucket_size: 32768
+world_size: 2
+gpu_ranks: [0, 1]
+batch_type: "tokens"
+batch_size: 128
+valid_batch_size: 8
+max_generator_batches: 2
+accum_count: [4]
+accum_steps: [0]
+
+# Optimization
+model_dtype: "fp32"
+optim: "adam"
+learning_rate: 2
+warmup_steps: 8000
+decay_method: "noam"
+adam_beta2: 0.998
+max_grad_norm: 0
+label_smoothing: 0.1
+param_init: 0
+param_init_glorot: true
+normalization: "tokens"
+
+# Model
+encoder_type: transformer
+decoder_type: transformer
+position_encoding: true
+enc_layers: 6
+dec_layers: 6
+heads: 12
+rnn_size: 300
+both_embeddings: glove840b/glove.840B.300d.txt
+embeddings_type: "GloVe"
+word_vec_size: 300
+transformer_ff: 2048
+dropout_steps: [0]
+dropout: [0.1]
+early_stopping: 5
