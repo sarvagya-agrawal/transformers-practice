@@ -26,8 +26,9 @@ for line in train_lines:
         src = '__User ' + '__User '.join(src.split('__User')[-context:])
     train_src.append(src.replace('  ', ' '))
     slots = line[1].strip().split(',')
-    slots = [
-        slot.strip() for slot in slots if 'not mentioned' not in slot or 'none' not in slot]
+    # slots = [
+    #     slot.strip() for slot in slots if 'not mentioned' not in slot or 'none' not in slot]
+    slots = [slot.strip() for slot in slots]
     # slots = [slot.strip() for slot in slots]
     # skip = False
     # for slot in slots:
@@ -49,8 +50,9 @@ for line in valid_lines:
         src = '__User ' + '__User '.join(src.split('__User')[-context:])
     valid_src.append(src.replace('  ', ' '))
     slots = line[1].strip().split(',')
-    slots = [
-        slot.strip() for slot in slots if 'not mentioned' not in slot or 'none' not in slot]
+    # slots = [
+    #     slot.strip() for slot in slots if 'not mentioned' not in slot or 'none' not in slot]
+    slots = [slot.strip() for slot in slots]
     # slots = [slot.strip() for slot in slots]
     # skip = list()
     # for slot in slots:
@@ -73,8 +75,39 @@ for line in test_lines:
         src = '__User ' + '__User '.join(src.split('__User')[-context:])
     test_src.append(src.replace('  ', ' '))
     slots = line[1].strip().split(',')
-    slots = [
-        slot.strip() for slot in slots if 'not mentioned' not in slot or 'none' not in slot]
+    # slots = [
+    #     slot.strip() for slot in slots if 'not mentioned' not in slot or 'none' not in slot]
+    slots = [slot.strip() for slot in slots]
+    # slots = [slot.strip() for slot in slots]
+    # skip = False
+    # for slot in slots:
+    #     if 'taxi' == slot.strip().split(' ')[0]:
+    #         del train_src[-1]
+    #         skip = True
+    #         break
+    # if skip:
+    #     continue
+    s = '< ' + (' , ').join(slots) + ' >\n'
+    test_tgt.append(s.replace('  ', ' '))
+
+with open(f'{out_dir}/train.src', 'w') as f:
+    for line in train_src:
+        f.write(line)
+with open(f'{out_dir}/train.tgt', 'w') as f:
+    for line in train_tgt:
+        f.write(line)
+with open(f'{out_dir}/valid.src', 'w') as f:
+    for line in valid_src:
+        f.write(line)
+with open(f'{out_dir}/valid.tgt', 'w') as f:
+    for line in valid_tgt:
+        f.write(line)
+with open(f'{out_dir}/test.src', 'w') as f:
+    for line in test_src:
+        f.write(line)
+with open(f'{out_dir}/test.tgt', 'w') as f:
+    for line in test_tgt:
+        f.write(line)
     # slots = [slot.strip() for slot in slots]
     # skip = list()
     # for slot in slots:
