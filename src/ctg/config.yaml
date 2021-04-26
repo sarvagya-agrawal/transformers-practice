@@ -1,40 +1,41 @@
 # Train parameters
-model: t5-small
-tokenizer: BPE
+model: None
 model-pretrained: False
-tokenizer-pretrained: False
+tokenizer: gpt2
+tokenizer-pretrained: True
+hf-model-config: distilgpt2
+hf-model-config-pretrained: distilgpt2
 optimizer: AdamW
-scheduler: LinearLambdaLR
-batch-size: 4
-max-length: 512
+scheduler: linear
+batch-size: 1
+batch-size-eval: 4
+max-src-length: 512
+max-tgt-length: 512
 max-epochs: 100
 num-trials: 1
 loss: cross_entropy
 clip-grad: 1.0
 optimizer-kwargs:
-  lr: 0.0005
+  lr: 0.00005
+  weight_decay: 0.00005
 scheduler-kwargs:
-  num_warmup_steps: 1500
+  num_warmup_steps: 500
 mask: False
+pad-to-max-length: True
 
 # Data Parameters
-name: smcalflow
+data-name: wikitext
+data-config: wikitext-2-raw-v1
 train-src: /home/mat/archive/datasets/smcalflow/prepared-context2/train.json
 val-src: /home/mat/archive/datasets/smcalflow/prepared-context2/valid.json
 vocab: /home/mat/archive/datasets/smcalflow/prepared-context2/vocab.txt
-task: nmt
-overwrite_cache: True
+task: clm
+overwrite-cache: False
 num-workers: 4
-max-train-samples: 5000
-max-val-samples: 5000
-tokenizer-files:
-  - /home/mat/archive/datasets/smcalflow/prepared-context2/train.src
-  - /home/mat/archive/datasets/smcalflow/prepared-context2/train.tgt
-  - /home/mat/archive/datasets/smcalflow/prepared-context2/valid.src
-  - /home/mat/archive/datasets/smcalflow/prepared-context2/valid.tgt
+max-train-samples: 1000
+max-val-samples: 1000
+# tokenizer-files:
 
-# io
-output: /home/mat/archive/playground/_test-output
 checkpoint: /home/mat/archive/playground/_test-checkpoint
 cache-dir: /home/mat/archive/playground/_test-cache
 save-freq: 1

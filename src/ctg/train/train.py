@@ -5,25 +5,34 @@
 """
 from typing import Dict, Any, List
 from argparse import Namespace
-from copy import deepcopy
 from pathlib import Path
 
 import logging
+import random
+import math
 import time
 
+from transformers import set_seed, AutoConfig, \
+    AutoTokenizer, AutoModelForSeq2SeqLM, \
+    DataCollatorForSeq2Seq, default_data_collator, \
+    AutoModelForCausalLM, AdamW, get_scheduler
 from torch.optim.lr_scheduler import LambdaLR, StepLR
-from transformers import PreTrainedTokenizerFast
+from torch.utils.data.dataloader import DataLoader
+from accelerate import Accelerator
+from datasets import load_dataset
 
-import torch.multiprocessing as mp
-import torch.distributed as dist
+# from adas import Adas
+import transformers
+import datasets
+
 import pandas as pd
 import numpy as np
 import torch
 import tqdm
 
-from ..data.utils import extend_vocabulary, load_data, right_shift
+# from ..data.utils import extend_vocabulary, load_data, right_shift
 from ..models import get_tokenizer, get_model
-from ..utils.logging import logger, mp_logger
+from ..utils.logging import logger  # , mp_logger
 from ..optim import get_optimizer_scheduler
 from ..utils.io import create_dir
 
@@ -404,29 +413,276 @@ class TrainingAgent:
 
 
 def main(args: Namespace) -> None:
-    args.ngpus_per_node = ngpus_per_node = torch.cuda.device_count() if \
-        args.gpu is None else 1 if isinstance(args.gpu, int) else len(args.gpu)
-    args.distributed = (args.mpd or args.world_size > 1) and not args.cpu
-    if args.gpu is None and not args.distributed:
-        raise ValueError("Must specify gpu or distributed")
-    logger.info(f"GPU: {args.gpu}")
-    logger.info(f"NGPUS: {ngpus_per_node}")
-    if args.mpd and not args.cpu:
-        log_q = None  # mp_logger(args.log)
-        args.world_size *= ngpus_per_node
-        mp.spawn(worker, nprocs=ngpus_per_node,
-                 args=(ngpus_per_node, deepcopy(args), log_q))
+    accelerator = Accelerator()
+    logger.info(accelerator.state)
+    if accelerator.is_local_main_process:
+        datasets.utils.logging.set_verbosity_warning()
+        transformers.utils.logging.set_verbosity_info()
     else:
-        worker(args.gpu if not args.cpu else None, ngpus_per_node, args, None)
+        datasets.utils.logging.set_verbosity_error()
+        transformers.utils.logging.set_verbosity_error()
 
+    if args.seed is not None:
+        set_seed(args.seed)
 
-def worker(gpu: int, ngpus_per_node: int, args: Namespace, log_q):
-    args.gpu = gpu
-    if args.distributed:
-        if args.mpd:
-            args.rank = args.rank * ngpus_per_node + gpu
-        dist.init_process_group(
-            backend=args.dist_backend, init_method=args.dist_url,
-            world_size=args.world_size, rank=args.rank)
-    training_agent = TrainingAgent(args=args, log_q=log_q)
-    training_agent.train()
+    if args.data.data_name is not None and args.data.data_config is not None:
+        raw_datasets = load_dataset(
+            args.data.data_name, args.data.data_config)
+        if "validation" not in raw_datasets.keys():
+            raw_datasets["validation"] = load_dataset(
+                args.data_name,
+                args.data_config,
+                split=f"train[:{args.data.val_split}%]",
+            )
+            raw_datasets["train"] = load_dataset(
+                args.data_name,
+                args.data_config,
+                split=f"train[{args.data.val_split}%:]",
+            )
+    else:
+        data_files = dict()
+        data_files["train"] = args.data.train_src
+        if args.data.val_src is not None:
+            data_files["validation"] = args.data.val_src
+        extension = Path(args.data.train_src).suffix[1:]
+        if extension == "txt":
+            extension = "text"
+        raw_datasets = load_dataset(extension, data_files=data_files)
+
+    if args.train.hf_model_config is not None:
+        config = AutoConfig.from_pretrained(args.train.hf_model_config) if \
+            args.train.hf_model_config_pretrained else \
+            AutoConfig(args.train.hf_model_config)
+    else:
+        config = AutoConfig.from_pretrained(args.train.model) if \
+            args.train.hf_model_config_pretrained else \
+            AutoConfig(args.train.model)
+
+    tokenizer = AutoTokenizer.from_pretrained(
+        args.train.tokenizer, use_fast=True) if \
+        args.train.tokenizer_pretrained else None
+
+    if args.data.task == 'nmt':
+        model = AutoModelForSeq2SeqLM.from_pretrained(
+            args.train.model, config=config) if args.train.model_pretrained \
+            else AutoModelForSeq2SeqLM.from_config(config)
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+            args.train.model, config=config) if args.train.model_pretrained \
+            else AutoModelForCausalLM.from_config(config)
+
+    model.resize_token_embeddings(len(tokenizer))
+
+    if args.data.task == 'nmt':
+        if model.config.decoder_start_token_id is None:
+            raise ValueError("Decoder start token id is None")
+
+    column_names = raw_datasets['train'].column_names
+    text_column_name = "text" if "text" in column_names else column_names[0]
+    padding = "max_length" if args.data.pad_to_max_length else False
+    if args.data.task == 'clm':
+        if args.data.block_size is None:
+            block_size = tokenizer.model_max_length
+            if block_size > 1024:
+                logger.warning(
+                    "The tokenizer picked seems to have a very large" +
+                    f" `model_max_length` ({tokenizer.model_max_length}). "
+                    "Picking 1024 instead. You can change that default value" +
+                    " by passing --block_size xxx.")
+            block_size = 1024
+        else:
+            if args.data.block_size > tokenizer.model_max_length:
+                logger.warning(
+                    f"The block_size passed ({args.block_size}) is larger " +
+                    "than the maximum length for the model"
+                    f"({tokenizer.model_max_length}). " +
+                    f"Using block_size={tokenizer.model_max_length}.")
+            block_size = min(args.data.block_size, tokenizer.model_max_length)
+
+    def preprocess_data(examples):
+        if args.data.task == 'nmt':
+            inputs = [args.data.prefix + ex["source"]
+                      for ex in examples["nmt"]]
+            targets = [ex["target"] for ex in examples["nmt"]]
+            model_inputs = tokenizer(inputs, max_length=args.max_src_length,
+                                     padding=padding, truncation=True)
+            with tokenizer.as_target_tokenizer():
+                labels = tokenizer(targets, max_length=args.max_tgt_length,
+                                   padding=padding, truncation=True)
+
+                if padding == 'max_length' and args.data.ignore_pad__for_loss:
+                    labels['input_ids'] = [
+                        [tok if tok != tokenizer.pad_token_id else -100 for
+                            tok in label] for label in labels['input_ids']]
+            model_inputs['labels'] = labels['input_ids']
+            return model_inputs
+        else:
+            # Chunking handled in group texts: ignore warnings
+            return tokenizer(examples[text_column_name])
+
+    if args.data.max_train_samples > 0:
+        raw_datasets['train'] = raw_datasets['train'].select(
+            range(min(args.data.max_train_samples,
+                      len(raw_datasets['train']))))
+    if args.data.max_val_samples > 0:
+        raw_datasets['validation'] = raw_datasets['validation'].select(
+            range(min(args.data.max_train_samples,
+                      len(raw_datasets['validation']))))
+    processed_datasets = raw_datasets.map(
+        preprocess_data,
+        batched=True,
+        num_proc=args.data.num_workers,
+        remove_columns=column_names,
+        load_from_cache_file=not args.data.overwrite_cache)
+    if args.data.task == 'clm':
+        def group_texts(examples):
+            concatenated_examples = {
+                k: sum(examples[k], []) for k in examples.keys()}
+            total_length = len(concatenated_examples[list(examples.keys())[0]])
+            total_length = (total_length // block_size) * block_size
+            result = {
+                k: [t[i: i + block_size]
+                    for i in range(0, total_length, block_size)]
+                for k, t in concatenated_examples.items()
+            }
+            result["labels"] = result["input_ids"].copy()
+            return result
+        processed_datasets = processed_datasets.map(
+            group_texts, batched=True, num_proc=args.data.num_workers,
+            load_from_cache_file=not args.data.overwrite_cache)
+    train_dataset = processed_datasets['train']
+    val_dataset = processed_datasets['validation']
+
+    if args.data.pad_to_max_length or args.data.task == 'clm':
+        data_collator = default_data_collator
+    else:
+        label_pad_tok_id = -100 if args.ignore_pad__for_loss else \
+            tokenizer.pad_token_id
+        data_collator = DataCollatorForSeq2Seq(
+            tokenizer, model=model, label_pad_token_id=label_pad_tok_id)
+    train_loader = DataLoader(train_dataset, shuffle=True,
+                              collate_fn=data_collator,
+                              batch_size=args.train.batch_size,)
+    val_loader = DataLoader(val_dataset, collate_fn=data_collator,
+                            batch_size=args.train.batch_size_eval,)
+    no_decay = ["bias", "LayerNorm.weight"]
+    optimizer_grouped_parameters = [
+        {
+            "params": [p for n, p in model.named_parameters() if not any(
+                nd in n for nd in no_decay)],
+            "weight_decay": args.train.optimizer_kwargs['weight_decay'] if
+            'weight_decay' in args.train.optimizer_kwargs.keys() else 0.0
+        },
+        {
+            "params": [p for n, p in model.named_parameters() if any(
+                nd in n for nd in no_decay)],
+            "weight_decay": 0.0,
+        },
+    ]
+    optimizer = AdamW(optimizer_grouped_parameters,
+                      **args.train.optimizer_kwargs)
+
+    # Prepare everything with our `accelerator`.
+    model, optimizer, train_loader, val_loader = accelerator.prepare(
+        model, optimizer, train_loader, val_loader
+    )
+
+    # steps = num iterations per epoch (len(dataset) / epoch) basically
+    num_update_steps_per_epoch = math.ceil(
+        len(train_loader) / args.train.gradient_accumulation_steps)
+    max_train_steps = args.train.max_epochs * num_update_steps_per_epoch
+    scheduler = get_scheduler(
+        name=args.train.scheduler,
+        optimizer=optimizer,
+        num_training_steps=max_train_steps,
+        **args.train.scheduler_kwargs)
+    metric = None
+
+    def postprocess_text(preds, labels):
+        preds = [pred.strip() for pred in preds]
+        labels = [[label.strip()] for label in labels]
+
+        return preds, labels
+
+    progress_bar = tqdm.tqdm(range(max_train_steps),
+                             disable=not accelerator.is_local_main_process)
+    steps_completed = 0
+    last_step = len(train_loader) - 1
+    for epoch in range(args.train.max_epochs):
+        model.train()
+        for step, batch in enumerate(train_loader):
+            outputs = model(**batch)
+            loss = outputs.loss
+            loss = loss / args.train.gradient_accumulation_steps
+            accelerator.backward(loss)
+            if step % args.train.gradient_accumulation_steps == 0 or \
+                    step == last_step:
+                optimizer.step()
+                scheduler.step()
+                optimizer.zero_grad()
+                progress_bar.update(1)
+                steps_completed += 1
+            else:
+                continue
+                if isinstance(optimizer, Adas):
+                    optimizer.step()
+            if steps_completed >= max_train_steps:
+                break
+        # if isinstance(optimizer, Adas):
+        #     optimizer.epoch_step()
+
+        model.eval()
+        losses = list()
+        for step, batch in enumerate(val_loader):
+            with torch.no_grad():
+                if args.data.task == 'nmt':
+                    generated_tokens = \
+                        accelerator.unwrap_model(model).generate(
+                            batch['input_ids'],
+                            attention_mask=batch['attention_mask'],
+                            max_length=args.data.max_tgt_length,
+                            num_beams=args.num_beams)
+                    generated_tokens = accelerator.pad_across_processes(
+                        generated_tokens, dim=1,
+                        pad_index=tokenizer.pad_token_id)
+                    labels = batch["labels"]
+                    if not args.pad_to_max_length:
+                        labels = accelerator.pad_across_processes(
+                            batch["labels"], dim=1,
+                            pad_index=tokenizer.pad_token_id)
+
+                    generated_tokens = accelerator.gather(
+                        generated_tokens).cpu().numpy()
+                    labels = accelerator.gather(labels).cpu().numpy()
+
+                    if args.ignore_pad_token_for_loss:
+                        # Replace -100 in the labels as we can't decode them.
+                        labels = np.where(labels != -100, labels,
+                                          tokenizer.pad_token_id)
+
+                    decoded_preds = tokenizer.batch_decode(
+                        generated_tokens, skip_special_tokens=True)
+                    decoded_labels = tokenizer.batch_decode(
+                        labels, skip_special_tokens=True)
+
+                    decoded_preds, decoded_labels = postprocess_text(
+                        decoded_preds, decoded_labels)
+
+                    metric.add_batch(predictions=decoded_preds,
+                                     references=decoded_labels)
+                else:
+                    outputs = model(**batch)
+                    loss = outputs.loss
+                    losses.append(accelerator.gather(
+                        loss.repeat(args.train.batch_size_eval)))
+        losses = torch.cat(losses)
+        losses = losses[: len(val_dataset)]
+        perplexity = math.exp(torch.mean(losses))
+        if args.data.task == 'nmt':
+            eval_metric = metric.compute()
+            logger.info({"bleu": eval_metric["score"]})
+        logger.info(f"epoch {epoch}: perplexity: {perplexity}")
+    accelerator.wait_for_everyone()
+    unwrapped_model = accelerator.unwrap_model(model)
+    unwrapped_model.save_pretrained(
+        args.io.checkpoint, save_function=accelerator.save)

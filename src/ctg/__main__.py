@@ -30,6 +30,7 @@ parent_parser = ArgumentParser(description='TOD Parent Parser')
 #                            help='Config file path', type=yaml.safe_load)
 parent_parser.add_argument('--config', '-c',
                            help='Config file path', default=None)
+parent_parser.add_argument('--seed', type=int, default=1000)
 general_args(parser, parent_parser)
 parent_parser.add_argument(
     '--logs', help="Set output for log outputs",
