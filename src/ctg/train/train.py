@@ -493,7 +493,7 @@ def main(args: Namespace) -> None:
         else:
             if args.data.block_size > tokenizer.model_max_length:
                 logger.warning(
-                    f"The block_size passed ({args.train.block_size}) is larger " +
+                    f"The block_size passed ({args.data.block_size}) is larger " +
                     "than the maximum length for the model"
                     f"({tokenizer.model_max_length}). " +
                     f"Using block_size={tokenizer.model_max_length}.")
