@@ -639,7 +639,7 @@ def main(args: Namespace) -> None:
             if steps_completed >= max_train_steps:
                 break
         if isinstance(optimizer, Adas):
-            optimizer.epoch_step()
+            optimizer.epoch_step(epoch)
 
         model.eval()
         losses = list()
