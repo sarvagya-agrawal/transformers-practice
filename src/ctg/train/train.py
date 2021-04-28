@@ -21,7 +21,7 @@ from torch.utils.data.dataloader import DataLoader
 from accelerate import Accelerator
 from datasets import load_dataset
 
-# from adas import Adas
+from adas import Adas
 import transformers
 import datasets
 
@@ -579,8 +579,15 @@ def main(args: Namespace) -> None:
             "weight_decay": 0.0,
         },
     ]
-    optimizer = AdamW(optimizer_grouped_parameters,
-                      **args.train.optimizer_kwargs)
+    if args.train.optimizer == 'Adas':
+        optimizer_grouped_parameters.append({
+            'all_params': list(model.parameters())})
+        optimizer = Adas(optimizer_grouped_parameters,
+                         params_dict=True,
+                         **args.train.optimizer_kwargs)
+    else:
+        optimizer = AdamW(optimizer_grouped_parameters,
+                          **args.train.optimizer_kwargs)
 
     # Prepare everything with our `accelerator`.
     model, optimizer, train_loader, val_loader = accelerator.prepare(
@@ -591,11 +598,13 @@ def main(args: Namespace) -> None:
     num_update_steps_per_epoch = math.ceil(
         len(train_loader) / args.train.gradient_accumulation_steps)
     max_train_steps = args.train.max_epochs * num_update_steps_per_epoch
-    scheduler = get_scheduler(
-        name=args.train.scheduler,
-        optimizer=optimizer,
-        num_training_steps=max_train_steps,
-        **args.train.scheduler_kwargs)
+    scheduler = None
+    if args.train.optimizer != 'Adas':
+        scheduler = get_scheduler(
+            name=args.train.scheduler,
+            optimizer=optimizer,
+            num_training_steps=max_train_steps,
+            **args.train.scheduler_kwargs)
     metric = None
 
     def postprocess_text(preds, labels):
@@ -618,7 +627,8 @@ def main(args: Namespace) -> None:
             if step % args.train.gradient_accumulation_steps == 0 or \
                     step == last_step:
                 optimizer.step()
-                scheduler.step()
+                if scheduler is not None:
+                    scheduler.step()
                 optimizer.zero_grad()
                 progress_bar.update(1)
                 steps_completed += 1
@@ -628,8 +638,8 @@ def main(args: Namespace) -> None:
                     optimizer.step()
             if steps_completed >= max_train_steps:
                 break
-        # if isinstance(optimizer, Adas):
-        #     optimizer.epoch_step()
+        if isinstance(optimizer, Adas):
+            optimizer.epoch_step()
 
         model.eval()
         losses = list()

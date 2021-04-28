@@ -5,7 +5,7 @@ tokenizer: gpt2
 tokenizer-pretrained: True
 hf-model-config: distilgpt2
 hf-model-config-pretrained: distilgpt2
-optimizer: AdamW
+optimizer: Adas
 scheduler: linear
 batch-size: 1
 batch-size-eval: 4
