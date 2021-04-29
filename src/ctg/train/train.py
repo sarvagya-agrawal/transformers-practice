@@ -10,8 +10,9 @@ from pathlib import Path
 import math
 import time
 
-from transformers import set_seed
 from accelerate import Accelerator
+from transformers import set_seed
+from adas import Adas
 
 import transformers
 import datasets
@@ -58,83 +59,10 @@ class TrainingAgent:
         pd.DataFrame(data=self.stats).to_csv(self.output_dir / 'stats.csv')
 
     def load_checkpoint(self, path: Path) -> None:
-        if not path.exists():
-            logger.warning("Unknown resume. Starting from scratch.")
-            self.args.io.resume = None
-            self.reset()
-            return
-        self.args.train.model_pretrained = True
-        train_state = torch.load(str(path / 'train_state.pt'),
-                                 map_location=self.device)
-        # train_state['args'].io.resume = self.args.io.resume
-        # if self.args != train_state['args']:
-        #     raise ValueError("Checkpoint args and config args don't match")
-        # self.tokenizer = PreTrainedTokenizerFast(
-        #     tokenizer_file=str(self.args.io.resume / 'tokenizer.json'))
-        self.model = get_model(
-            self.args.train.model,
-            cache_dir=self.args.io.cache_dir,
-            tokenizer_len=len(self.tokenizer),
-            pretrained=True,
-            weights=str(path),
-            task=self.args.data.task)
-        if self.args.distributed:
-            if self.gpu is not None:
-                self.model.to(self.device)
-                self.model = torch.nn.parallel.DistributedDataParallel(
-                    self.model,
-                    device_ids=[self.gpu],
-                    find_unused_parameters=True)
-            else:
-                self.model.cuda()
-                self.model = torch.nn.parallel.DistributedDataParallel(
-                    self.model,
-                    find_unused_parameters=True)
-        elif isinstance(self.gpu, list):
-            self.model = torch.nn.DataParallel(self.model)
-            self.model.to(self.device)
-        elif isinstance(self.gpu, int):
-            torch.cuda.set_device(self.gpu)
-            self.model = self.model.cuda(self.gpu)
-        # self.load_data()
-        self.optimizer, self.scheduler = get_optimizer_scheduler(
-            optim_method=self.args.train.optimizer,
-            scheduler_method=self.args.train.scheduler,
-            net_parameters=self.model.parameters(),
-            max_epochs=self.args.train.max_epochs,
-            train_loader_len=len(self.train_loader),
-            optimizer_kwargs=self.args.train.optimizer_kwargs,
-            scheduler_kwargs=self.args.train.scheduler_kwargs)
-        self.optimizer.load_state_dict(train_state['optimizer'])
-        self.scheduler.load_state_dict(train_state['scheduler'])
-        self.epoch = train_state['epoch']
-        self.trial = train_state['trial']
-        self.args.io.resume = None
+        return None
 
     def save_checkpoint(self, trial: int, epoch: int, stamp: str) -> None:
-        return
-        model_to_save = TrainingAgent.unwrap(self.model)
-        if hasattr(model_to_save, 'save_pretrained'):
-            model_to_save.save_pretrained(
-                str(self.checkpoint_dir / stamp))
-        else:
-            torch.save(model_to_save.state_dict(),
-                       str(self.checkpoint_dir / stamp))
-        # self.tokenizer.save_pretrained(str(self.checkpoint_dir / stamp))
-        # self.tokenizer.save_vocabulary(str(self.checkpoint_dir / stamp))
-        # self.tokenizer.save(str(self.checkpoint_dir / 'tokenizer.json'))
-        torch.save({
-            'args': self.args,
-            'epoch': epoch,
-            'trial': trial,
-            'optimizer': self.optimizer.state_dict(),
-            'scheduler': self.scheduler.state_dict(), },
-            str(self.checkpoint_dir / stamp / 'train_state.pt'))
-        # torch.save(self.optimizer.state_dict(), str(
-        #     self.checkpoint_dir / folder / 'optimizer.pt'))
-        # if self.scheduler is not None:
-        #     torch.save(self.optimizer.state_dict(), str(
-        #         self.checkpoint_dir / folder / 'scheduler.pt'))
+        return None
 
     def train(self) -> None:
         progress_bar = tqdm.tqdm(
