@@ -3,12 +3,9 @@
 @github: MathieuTuli
 @email: tuli.mathieu@gmail.com
 """
-from argparse import _ArgumentGroup
+from argparse import ArgumentParser
 
-from argparse import ArgumentParser, Namespace
-
-from ..optim import OPTIMIZERS, SCHEDULERS
-from ..data import DATASETS, TASKS
+from ..data import TASKS
 
 
 def train_args(sub_parser: ArgumentParser) -> None:

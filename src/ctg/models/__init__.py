@@ -41,5 +41,8 @@ def get_model_tokenizer(
             model, config=config) if model_pretrained \
             else AutoModelForCausalLM.from_config(config)
 
+    if task == 'nmt':
+        if model.config.decoder_start_token_id is None:
+            raise ValueError("Decoder start token id is None")
     model.resize_token_embeddings(len(tokenizer))
     return model, tokenizer

@@ -10,10 +10,9 @@ from pathlib import Path
 import math
 import time
 
-from transformers import set_seed, AdamW, get_scheduler
+from transformers import set_seed
 from accelerate import Accelerator
 
-from adas import Adas
 import transformers
 import datasets
 
@@ -322,51 +321,26 @@ def main(args: Namespace) -> None:
         batch_size_eval=args.train.batch_size_eval,
     )
 
-    if args.data.task == 'nmt':
-        if model.config.decoder_start_token_id is None:
-            raise ValueError("Decoder start token id is None")
-
-    no_decay = ["bias", "LayerNorm.weight"]
-    optimizer_grouped_parameters = [
-        {
-            "params": [p for n, p in model.named_parameters() if not any(
-                nd in n for nd in no_decay)],
-            "weight_decay": args.train.optimizer_kwargs['weight_decay'] if
-            'weight_decay' in args.train.optimizer_kwargs.keys() else 0.0
-        },
-        {
-            "params": [p for n, p in model.named_parameters() if any(
-                nd in n for nd in no_decay)],
-            "weight_decay": 0.0,
-        },
-    ]
-    if args.train.optimizer == 'Adas':
-        optimizer_grouped_parameters.append({
-            'all_params': list(model.parameters())})
-        optimizer = Adas(optimizer_grouped_parameters,
-                         params_dict=True,
-                         **args.train.optimizer_kwargs)
-    else:
-        optimizer = AdamW(optimizer_grouped_parameters,
-                          **args.train.optimizer_kwargs)
-
+    num_update_steps_per_epoch = math.ceil(
+        len(train_loader) / args.train.gradient_accumulation_steps)
+    args.train.max_train_steps = max_train_steps = \
+        args.train.max_epochs * num_update_steps_per_epoch
+    optimizer, scheduler = get_optimizer_scheduler(
+        optim_method=args.train.optimizer,
+        scheduler_method=args.train.scheduler,
+        params=list(model.parameters()),
+        named_parameters=list(model.named_parameters()),
+        max_epochs=args.train.max_epochs,
+        max_train_steps=max_train_steps,
+        optimizer_kwargs=args.train.optimizer_kwargs,
+        scheduler_kwargs=args.train.scheduler_kwargs,
+    )
     # Prepare everything with our `accelerator`.
     model, optimizer, train_loader, val_loader = accelerator.prepare(
         model, optimizer, train_loader, val_loader
     )
 
     # steps = num iterations per epoch (len(dataset) / epoch) basically
-    num_update_steps_per_epoch = math.ceil(
-        len(train_loader) / args.train.gradient_accumulation_steps)
-    args.train.max_train_steps = max_train_steps = \
-        args.train.max_epochs * num_update_steps_per_epoch
-    scheduler = None
-    if args.train.optimizer != 'Adas':
-        scheduler = get_scheduler(
-            name=args.train.scheduler,
-            optimizer=optimizer,
-            num_training_steps=max_train_steps,
-            **args.train.scheduler_kwargs)
     agent = TrainingAgent(
         args=args,
         model=model,

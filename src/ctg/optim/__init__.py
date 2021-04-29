@@ -3,34 +3,53 @@
 @github: MathieuTuli
 @email: tuli.mathieu@gmail.com
 """
-from argparse import Namespace
 from typing import Dict, Any
 
-from torch.optim.lr_scheduler import StepLR
-from torch.optim import SGD, AdamW, Adam
+import math
 
-from .lambdalr import ConstantLambdaLR, LinearLambdaLR
-
-OPTIMIZERS = ['SGD', 'AdamW', 'Adam']
-SCHEDULERS = ['LambdaLR', 'StepLR', 'None', None]
+from transformers import AdamW, get_scheduler
+from adas import Adas
 
 
 def get_optimizer_scheduler(
         optim_method: str,
         scheduler_method: str,
-        net_parameters,
+        params,
+        named_parameters,
         max_epochs: int,
-        train_loader_len: int,
+        max_train_steps: int,
         optimizer_kwargs: Dict[str, Any] = None,
         scheduler_kwargs: Dict[str, Any] = None):
     if optimizer_kwargs is None:
         optimizer_kwargs = dict()
     if scheduler_kwargs is None:
         optimizer_kwargs = dict()
-    optimizer = eval(optim_method)(net_parameters, **optimizer_kwargs)
-    if scheduler_method == 'LinearLambdaLR':
-        scheduler_kwargs['num_training_steps'] = train_loader_len * \
-            max_epochs
-    scheduler = None if scheduler_method == 'None' else eval(
-        scheduler_method)(optimizer, **scheduler_kwargs)
+    no_decay = ["bias", "LayerNorm.weight"]
+    optimizer_grouped_parameters = [
+        {
+            "params": [p for n, p in named_parameters if not any(
+                nd in n for nd in no_decay)],
+            "weight_decay": optimizer_kwargs['weight_decay'] if
+            'weight_decay' in optimizer_kwargs.keys() else 0.0
+        },
+        {
+            "params": [p for n, p in named_parameters if any(
+                nd in n for nd in no_decay)],
+            "weight_decay": 0.0,
+        },
+    ]
+    if optim_method == 'Adas':
+        optimizer_grouped_parameters.append({
+            'all_params': params})
+        optimizer_kwargs['params_dict'] = True
+    optimizer = eval(optim_method)(optimizer_grouped_parameters,
+                                   **optimizer_kwargs)
+
+    scheduler = None
+    if scheduler_method is not None:
+        scheduler = get_scheduler(
+            name=scheduler_method,
+            optimizer=optimizer,
+            num_training_steps=max_train_steps,
+            **scheduler_kwargs)
     return optimizer, scheduler
