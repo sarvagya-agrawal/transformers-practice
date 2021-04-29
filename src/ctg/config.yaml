@@ -8,7 +8,7 @@ hf-model-config-pretrained: distilgpt2
 optimizer: Adas
 scheduler: linear
 batch-size: 1
-batch-size-eval: 4
+batch-size-eval: 1
 max-src-length: 512
 max-tgt-length: 512
 max-epochs: 100
@@ -38,4 +38,5 @@ max-val-samples: 1000
 
 checkpoint: /home/mat/archive/playground/_test-checkpoint
 cache-dir: /home/mat/archive/playground/_test-cache
+output: /home/mat/archive/playground/_test-output
 save-freq: 1

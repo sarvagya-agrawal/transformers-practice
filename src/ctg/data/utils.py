@@ -3,20 +3,16 @@
 @github: MathieuTuli
 @email: tuli.mathieu@gmail.com
 """
-from typing import List, Union, Dict, Tuple
-from pathlib import PosixPath
+from typing import List, Union, Dict
+from pathlib import PosixPath, Path
 
-import numpy as np
-import spacy
 import torch
-import json
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+from transformers import default_data_collator, \
+    DataCollatorForSeq2Seq
 # from transformers import LineByLineTextDataset
-from torch.utils.data import Dataset, DataLoader, \
-    RandomSampler, SequentialSampler
-from transformers import DataCollatorForSeq2Seq
-from torch.nn.utils.rnn import pad_sequence
+from torch.utils.data import Dataset, DataLoader
 from datasets import load_dataset
 
 from ..utils.logging import logger
@@ -77,88 +73,140 @@ def extend_vocabulary(tokenizer, fname: PosixPath) -> None:
     tokenizer.add_tokens(vocab)
 
 
-def load_data(fname: PosixPath,
+def load_data(train_src: str,
+              val_src: str,
               tokenizer: PreTrainedTokenizerBase,
               model: torch.nn.Module,
-              max_length: int,
+              max_src_length: int,
+              max_tgt_length: int,
+              block_size: int,
               batch_size: int,
+              batch_size_eval: int,
               task: str,
               cache_dir: PosixPath,
-              max_samples: int = -1,
+              data_name: str = None,
+              data_config: str = None,
+              val_split: float = 0.0,
+              max_train_samples: int = -1,
+              max_val_samples: int = -1,
+              ignore_pad_for_loss: bool = True,
+              pad_to_max_length: bool = True,
               overwrite_cache: bool = False,
               num_workers: int = 4,
-              split: str = 'train',
               prefix: str = '',
-              distributed: bool = False) -> None:
-    if fname.suffix not in set(['.json']) or not fname.exists():
-        raise ValueError(f"Unknown src file {fname}. Files must be",
-                         " .json files")
-    dataset = load_dataset('json',
-                           data_files={split: str(fname)},
-                           field='data',
-                           cache_dir=cache_dir,
-                           split=split)
-    # dataset = LineByLineTextDataset(tokenizer, file_path=str(fname),
-    #                                 max_length=max_length)
-
-    logger.info("Loading data")
-
-    def tokenize(examples: List[str]) -> Tuple[List[int], None]:
-        inputs = examples["source"]
-        inputs = [prefix + i for i in inputs]
-        inputs = tokenizer(
-            inputs,
-            # add_special_tokens=True,
-            padding='max_length',
-            max_length=max_length,
-            return_tensors='np',
-            truncation=True)
-        if "target" in examples.keys():
-            targets = examples["target"]
-            with tokenizer.as_target_tokenizer():
-                targets = tokenizer(targets,
-                                    # add_special_tokens=True,
-                                    padding='max_length',
-                                    max_length=max_length,
-                                    return_tensors='np',
-                                    truncation=True)
-                # -100 is a specific number for masking
-                targets["input_ids"] = [
-                    [(_label if _label != tokenizer.pad_token_id else -100)
-                        for _label in label] for label in targets["input_ids"]]
-            # del inputs['attention_mask']
-            inputs["labels"] = targets["input_ids"]
-        return inputs
-
-    if max_samples > 0:
-        dataset = dataset.select(range(min(max_samples, len(dataset))))
-    dataset = dataset.map(
-        tokenize,
-        batched=True,
-        remove_columns=dataset.column_names,
-        num_proc=num_workers,
-        # batch_size=batch_size,
-        load_from_cache_file=not overwrite_cache
-    )
-    dataset.set_format(type='torch')
-    if not distributed:
-        sampler = RandomSampler(dataset) if split == 'train'\
-            else SequentialSampler(dataset)
+              ) -> None:
+    if data_name is not None and data_config is not None:
+        raw_datasets = load_dataset(
+            data_name, data_config)
+        if "validation" not in raw_datasets.keys():
+            raw_datasets["validation"] = load_dataset(
+                data_name,
+                data_config,
+                split=f"train[:{val_split}%]",
+            )
+            raw_datasets["train"] = load_dataset(
+                data_name,
+                data_config,
+                split=f"train[{val_split}%:]",
+            )
     else:
-        sampler = torch.utils.data.distributed.DistributedSampler(
-            dataset, shuffle=split == 'train')
-    if task == 'nmt':
+        data_files = dict()
+        data_files["train"] = train_src
+        if val_src is not None:
+            data_files["validation"] = val_src
+        extension = Path(train_src).suffix[1:]
+        if extension == "txt":
+            extension = "text"
+        raw_datasets = load_dataset(extension, data_files=data_files)
+    column_names = raw_datasets['train'].column_names
+    text_column_name = "text" if "text" in column_names else column_names[0]
+    padding = "max_length" if pad_to_max_length else False
+    if task == 'clm':
+        if block_size is None:
+            block_size = tokenizer.model_max_length
+            if block_size > 1024:
+                logger.warning(
+                    "The tokenizer picked seems to have a very large" +
+                    f" `model_max_length` ({tokenizer.model_max_length}). "
+                    "Picking 1024 instead. You can change that default value" +
+                    " by passing --block_size xxx.")
+            block_size = 1024
+        else:
+            if block_size > tokenizer.model_max_length:
+                logger.warning(
+                    f"The block_size passed ({block_size}) is larger " +
+                    "than the maximum length for the model"
+                    f"({tokenizer.model_max_length}). " +
+                    f"Using block_size={tokenizer.model_max_length}.")
+            block_size = min(block_size, tokenizer.model_max_length)
+
+    def preprocess_data(examples):
+        if task == 'nmt':
+            inputs = [prefix + ex["source"]
+                      for ex in examples["nmt"]]
+            targets = [ex["target"] for ex in examples["nmt"]]
+            model_inputs = tokenizer(inputs, max_length=max_src_length,
+                                     padding=padding, truncation=True)
+            with tokenizer.as_target_tokenizer():
+                labels = tokenizer(targets, max_length=max_tgt_length,
+                                   padding=padding, truncation=True)
+
+                if padding == 'max_length' and ignore_pad_for_loss:
+                    labels['input_ids'] = [
+                        [tok if tok != tokenizer.pad_token_id else -100 for
+                            tok in label] for label in labels['input_ids']]
+            model_inputs['labels'] = labels['input_ids']
+            return model_inputs
+        else:
+            # Chunking handled in group texts: ignore warnings
+            return tokenizer(examples[text_column_name])
+
+    if max_train_samples > 0:
+        raw_datasets['train'] = raw_datasets['train'].select(
+            range(min(max_train_samples,
+                      len(raw_datasets['train']))))
+    if max_val_samples > 0:
+        raw_datasets['validation'] = raw_datasets['validation'].select(
+            range(min(max_val_samples,
+                      len(raw_datasets['validation']))))
+    processed_datasets = raw_datasets.map(
+        preprocess_data,
+        batched=True,
+        num_proc=num_workers,
+        remove_columns=column_names,
+        load_from_cache_file=not overwrite_cache)
+    if task == 'clm':
+        def group_texts(examples):
+            concatenated_examples = {
+                k: sum(examples[k], []) for k in examples.keys()}
+            total_length = len(concatenated_examples[list(examples.keys())[0]])
+            total_length = (total_length // block_size) * block_size
+            result = {
+                k: [t[i: i + block_size]
+                    for i in range(0, total_length, block_size)]
+                for k, t in concatenated_examples.items()
+            }
+            result["labels"] = result["input_ids"].copy()
+            return result
+        processed_datasets = processed_datasets.map(
+            group_texts, batched=True, num_proc=num_workers,
+            load_from_cache_file=not overwrite_cache)
+    train_dataset = processed_datasets['train']
+    val_dataset = processed_datasets['validation']
+
+    if pad_to_max_length or task == 'clm':
+        data_collator = default_data_collator
+    else:
+        label_pad_tok_id = -100 if ignore_pad_for_loss else \
+            tokenizer.pad_token_id
         data_collator = DataCollatorForSeq2Seq(
-            tokenizer,
-            model=model,
-            label_pad_token_id=-100)
-    return DataLoader(
-        dataset,
-        sampler=sampler,
-        batch_size=batch_size,
-        # collate_fn=data_collator,
-        pin_memory=False,
-        num_workers=num_workers), sampler
+            tokenizer, model=model, label_pad_token_id=label_pad_tok_id)
+    train_loader = DataLoader(train_dataset, shuffle=True,
+                              collate_fn=data_collator,
+                              batch_size=batch_size,)
+    val_loader = DataLoader(val_dataset, collate_fn=data_collator,
+                            batch_size=batch_size_eval,)
+    return train_loader, train_dataset, val_loader, val_dataset
 
 
 def read_lines(filename: Union[str, PosixPath]) -> List[str]:
