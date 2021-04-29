@@ -6,16 +6,15 @@
 
 from argparse import ArgumentParser
 
-from ..models import MODELS, TOKENIZERS
 from ..data import DATASETS, TASKS
 from . import DECODE_METHODS
 
 
 def decode_args(sub_parser: ArgumentParser) -> None:
     decode_group = sub_parser.add_argument_group('decode')
-    decode_group.add_argument("--model", type=str, choices=MODELS)
+    decode_group.add_argument("--model", type=str)
     decode_group.add_argument("--weights", type=str)
-    decode_group.add_argument("--tokenizer", type=str, choices=TOKENIZERS)
+    decode_group.add_argument("--tokenizer", type=str)
     decode_group.add_argument("--batch-size", type=int)
     decode_group.add_argument("--max-length", type=int)
     decode_group.add_argument("--method", choices=DECODE_METHODS)

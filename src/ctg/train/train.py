@@ -4,23 +4,14 @@
 @email: tuli.mathieu@gmail.com
 """
 from collections import defaultdict
-from typing import Dict, Any, List
 from argparse import Namespace
 from pathlib import Path
 
-import logging
-import random
 import math
 import time
 
-from transformers import set_seed, AutoConfig, \
-    AutoTokenizer, AutoModelForSeq2SeqLM, \
-    DataCollatorForSeq2Seq, default_data_collator, \
-    AutoModelForCausalLM, AdamW, get_scheduler
-from torch.optim.lr_scheduler import LambdaLR, StepLR
-from torch.utils.data.dataloader import DataLoader
+from transformers import set_seed, AdamW, get_scheduler
 from accelerate import Accelerator
-from datasets import load_dataset
 
 from adas import Adas
 import transformers
@@ -31,10 +22,10 @@ import numpy as np
 import torch
 import tqdm
 
-from ..data.utils import load_data
-from ..models import get_tokenizer, get_model
-from ..utils.logging import logger  # , mp_logger
 from ..optim import get_optimizer_scheduler
+from ..models import get_model_tokenizer
+from ..data.utils import load_data
+from ..utils.logging import logger  # , mp_logger
 from ..utils.io import create_dir
 
 
@@ -299,29 +290,14 @@ def main(args: Namespace) -> None:
     if args.seed is not None:
         set_seed(args.seed)
 
-    if args.train.hf_model_config is not None:
-        config = AutoConfig.from_pretrained(args.train.hf_model_config) if \
-            args.train.hf_model_config_pretrained else \
-            AutoConfig(args.train.hf_model_config)
-    else:
-        config = AutoConfig.from_pretrained(args.train.model) if \
-            args.train.hf_model_config_pretrained else \
-            AutoConfig(args.train.model)
-
-    tokenizer = AutoTokenizer.from_pretrained(
-        args.train.tokenizer, use_fast=True) if \
-        args.train.tokenizer_pretrained else None
-
-    if args.data.task == 'nmt':
-        model = AutoModelForSeq2SeqLM.from_pretrained(
-            args.train.model, config=config) if args.train.model_pretrained \
-            else AutoModelForSeq2SeqLM.from_config(config)
-    else:
-        model = AutoModelForCausalLM.from_pretrained(
-            args.train.model, config=config) if args.train.model_pretrained \
-            else AutoModelForCausalLM.from_config(config)
-
-    model.resize_token_embeddings(len(tokenizer))
+    model, tokenizer = get_model_tokenizer(
+        model_name=args.train.model,
+        model_pretrained=args.train.model_pretrained,
+        tokenizer_name=args.train.tokenizer,
+        tokenizer_pretrained=args.train.tokenizer_pretrained,
+        hf_model_config=args.train.hf_model_config,
+        hf_model_config_pretrained=args.train.hf_model_config_pretrained,
+        task=args.data.task)
     train_loader, train_dataset, val_loader, val_dataset = load_data(
         tokenizer=tokenizer,
         model=model,

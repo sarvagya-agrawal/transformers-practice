@@ -13,7 +13,7 @@ import torch
 import tqdm
 
 from ..data.utils import load_data, extend_vocabulary
-from ..models import get_model, get_tokenizer
+from ..models import get_model_tokenizer
 from ..utils.io import create_dir
 
 DECODE_METHODS = ['greedy', 'beam']

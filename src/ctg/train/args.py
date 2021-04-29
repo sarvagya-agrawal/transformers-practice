@@ -7,16 +7,15 @@ from argparse import _ArgumentGroup
 
 from argparse import ArgumentParser, Namespace
 
-from ..models import MODELS, TOKENIZERS
 from ..optim import OPTIMIZERS, SCHEDULERS
 from ..data import DATASETS, TASKS
 
 
 def train_args(sub_parser: ArgumentParser) -> None:
     train_group = sub_parser.add_argument_group('train')
-    train_group.add_argument("--model", type=str, choices=MODELS)
+    train_group.add_argument("--model", type=str)
     train_group.add_argument("--model-pretrained", type=bool, default=True)
-    train_group.add_argument("--tokenizer", type=str, choices=TOKENIZERS)
+    train_group.add_argument("--tokenizer", type=str)
     train_group.add_argument("--tokenizer-pretrained", type=bool, default=True)
     train_group.add_argument("--hf-model-config", type=str, default=None)
     train_group.add_argument(

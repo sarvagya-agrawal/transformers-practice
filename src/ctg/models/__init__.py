@@ -3,142 +3,43 @@
 @github: MathieuTuli
 @email: tuli.mathieu@gmail.com
 """
-from pathlib import Path
-from typing import List
-
-import time
-
 # BertTokenizer, OpenAIGPTTokenizer, GPT2Tokenizer, AlbertTokenizer
-from transformers.tokenization_utils_base import PreTrainedTokenizerBase
-from transformers import (
-    GPT2Config, GPT2LMHeadModel,
-    AutoTokenizer, AutoModelForSeq2SeqLM,
-    T5ForConditionalGeneration, T5Config,
-    EncoderDecoderModel, EncoderDecoderConfig,
-    BertConfig, BertModel, BertForMaskedLM, BertLMHeadModel,
-    PreTrainedTokenizerFast
-)
-from tokenizers.pre_tokenizers import Whitespace
-from tokenizers.trainers import BpeTrainer
-from tokenizers import Tokenizer
-from tokenizers.models import BPE
-
-import torch
-
-from .configs import CONFIG_DICTS
-
-TOKENIZERS = set(['bert-base-uncased', 'openai-gpt',
-                  'gpt2', 'bert-base-uncased', 't5-small', 'BPE'])
-MODELS = set(['gpt2', 'distilgpt2', 'bert-base-uncased', 't5-small'])
+from pathlib import Path
+from transformers import AutoConfig, \
+    AutoTokenizer, AutoModelForSeq2SeqLM, \
+    AutoModelForCausalLM
 
 
-def get_tokenizer(tokenizer_name: str,
-                  cache_dir: Path,
-                  dataset: str,
-                  task: str,
-                  pretrained: True,
-                  datasets: List[str] = None,
-                  lower_case: bool = True) -> PreTrainedTokenizerBase:
-    if pretrained:
-        if tokenizer_name in TOKENIZERS:
-            tokenizer = AutoTokenizer.from_pretrained(tokenizer_name,
-                                                      cache_dir=cache_dir)
-        else:
-            raise ValueError(f'Unknown tokenizer. Must be one of {TOKENIZERS}')
+def get_model_tokenizer(
+        model_name,
+        tokenizer_name: str,
+        task: str,
+        model_pretrained: bool = False,
+        tokenizer_pretrained: bool = True,
+        hf_model_config: str = None,
+        hf_model_config_pretrained: bool = False,
+        cache_dir: Path = None):
+    if hf_model_config is not None:
+        config = AutoConfig.from_pretrained(hf_model_config) if \
+            hf_model_config_pretrained else \
+            AutoConfig(hf_model_config)
     else:
-        if tokenizer_name == 'BPE':
-            # if not (Path(cache_dir) / 'BPE_custom.json').exists():
-            tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
-            trainer = BpeTrainer(
-                special_tokens=["[UNK]", "[BOS]", "[EOS]",
-                                "[SEP]", "[PAD]", "[MASK]"])
-            tokenizer.pre_tokenizer = Whitespace()
-            tokenizer.train(datasets, trainer)
-            stamp = time.time()
-            tokenizer.save(cache_dir + "/" + f'BPE_custom_{stamp}.json')
-            tokenizer = PreTrainedTokenizerFast(
-                tokenizer_file=cache_dir + "/" + f'BPE_custom_{stamp}.json')
+        config = AutoConfig.from_pretrained(model_name) if \
+            hf_model_config_pretrained else \
+            AutoConfig(model_name)
 
-    if dataset == 'multiwoz2.1':
-        if task == 'clm':
-            tokenizer.add_special_tokens(
-                {'bos_token': '<|endoftext|>'})
-            tokenizer.add_special_tokens(
-                {'eos_token': '<|endoftext|>'})
-    if tokenizer._pad_token is None:
-        tokenizer.add_special_tokens(
-            {'pad_token': '[PAD]'})
-    if tokenizer._bos_token is None:
-        tokenizer.add_special_tokens(
-            {'bos_token': '[BOS]'})
-    if tokenizer._eos_token is None:
-        tokenizer.add_special_tokens(
-            {'eos_token': '[EOS]'})
-    if tokenizer._mask_token is None:
-        tokenizer.add_special_tokens(
-            {'eos_token': '[MASK]'})
-    return tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(
+        tokenizer_name, use_fast=True) if \
+        tokenizer_pretrained else None
 
-
-def get_model(model_name: str,
-              cache_dir: Path,
-              tokenizer_len: int,
-              pretrained: bool = True,
-              weights: str = None,
-              task: str = 'clm') -> torch.nn.Module:
-    if model_name == 'gpt2':
-        _model = GPT2LMHeadModel
-        _config = GPT2Config()
-    elif model_name == 'distilgpt2':
-        _model = GPT2LMHeadModel
-        _config = GPT2Config
-    elif model_name == 'bert-base-uncased':
-        if task == 'nmt':
-            if weights is not None:
-                _model = EncoderDecoderModel
-                _config = EncoderDecoderConfig
-            else:
-                if pretrained:
-                    encoder_config = BertConfig()  # vocab_size=tokenizer_len)
-                    encoder = BertModel.from_pretrained(
-                        model_name, config=encoder_config,
-                        cache_dir=cache_dir)
-                    decoder_config = BertConfig()  # vocab_size=tokenizer_len,
-                    # is_decoder=True,
-                    # add_cross_attention=True)
-                    decoder = BertLMHeadModel.from_pretrained(
-                        model_name,
-                        config=decoder_config,
-                        cache_dir=cache_dir)
-                    decoder.is_decoder = True
-                    decoder.add_cross_atention = True
-                    encoder.resize_token_embeddings(tokenizer_len)
-                    decoder.resize_token_embeddings(tokenizer_len)
-                    model = EncoderDecoderModel(
-                        encoder=encoder, decoder=decoder)
-                else:
-                    pass
-            return model
-        elif task == 'clm':
-            _model = BertLMHeadModel
-            _config = BertConfig
-    elif model_name == 't5-small' and task == 'nmt':
-        _model = T5ForConditionalGeneration
-        _config = T5Config
+    if task == 'nmt':
+        model = AutoModelForSeq2SeqLM.from_pretrained(
+            model_name, config=config) if model_pretrained \
+            else AutoModelForSeq2SeqLM.from_config(config)
     else:
-        raise ValueError("Unknown model and/or task")
-    if pretrained:
-        model_name = weights if weights is not None else model_name
-        model = _model.from_pretrained(
-            model_name,
-            cache_dir=cache_dir,
-            config=_config.from_pretrained(model_name) if _config is not
-            None else None)
-    else:
-        model = _model(
-            config=_config(**CONFIG_DICTS[model_name]))
-    if task == 'nmt' and model.config.decoder_start_token_id is None:
-        raise ValueError(
-            "Make sure that `decoder_start_token_id` is correctly defined")
-    model.resize_token_embeddings(tokenizer_len)
-    return model
+        model = AutoModelForCausalLM.from_pretrained(
+            model, config=config) if model_pretrained \
+            else AutoModelForCausalLM.from_config(config)
+
+    model.resize_token_embeddings(len(tokenizer))
+    return model, tokenizer
