@@ -33,6 +33,8 @@ def train_args(sub_parser: ArgumentParser) -> None:
     train_group.add_argument("--scheduler-kwargs", default={})
     train_group.add_argument("--gradient-accumulation-steps", type=int,
                              default=1,)
+    train_group.add_argument("--ray-tune", type=bool, default=False)
+    train_group.add_argument("--ray-tune-samples", type=int, default=20)
 
     data_group = sub_parser.add_argument_group('data')
     data_group.add_argument("--data-name", type=str, default=None)

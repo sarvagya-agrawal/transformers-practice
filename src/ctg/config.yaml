@@ -16,12 +16,15 @@ num-trials: 1
 loss: cross_entropy
 clip-grad: 1.0
 optimizer-kwargs:
-  lr: 0.00005
-  weight_decay: 0.00005
+  lr: 0.04
+  weight_decay: ['loguniform', 0.00001, 0.01]
+  momentum: ['loguniform', 0.1, 0.9]
+  beta: 0.95
 scheduler-kwargs:
   num_warmup_steps: 500
 mask: False
 pad-to-max-length: True
+ray-tune: True
 
 # Data Parameters
 data-name: wikitext

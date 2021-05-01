@@ -5,14 +5,18 @@
 """
 from collections import defaultdict
 from argparse import Namespace
+from functools import partial
 from pathlib import Path
 
 import math
 import time
 
+from ray.tune.schedulers import ASHAScheduler
 from accelerate import Accelerator
 from transformers import set_seed
+from ray.tune import CLIReporter
 from adas import Adas
+from ray import tune
 
 import transformers
 import datasets
@@ -121,6 +125,8 @@ class TrainingAgent:
                             f"Val PPL {val_ppl}")
                 self.stats[epoch]['train_ppl'] = train_ppl
                 self.stats[epoch]['val_ppl'] = val_ppl
+                if self.args.train.ray_tune:
+                    tune.report(loss=val_ppl)
             if isinstance(self.optimizer, Adas):
                 self.optimizer.epoch_step(epoch)
             if (epoch % self.args.io.save_freq == 0 and epoch > 0):
@@ -205,6 +211,47 @@ class TrainingAgent:
 
 
 def main(args: Namespace) -> None:
+    if args.train.ray_tune:
+        gpus_per_trial = torch.cuda.device_count()
+        config = dict()
+        for k, v in args.train.optimizer_kwargs.items():
+            if not isinstance(v, list):
+                continue
+            if v[0] == 'loguniform':
+                config[k] = tune.loguniform(float(v[1]), float(v[2]))
+            elif v[0] == 'sample_from':
+                config[k] = tune.sample_from(
+                    lambda _: np.random.randint(int(v[1]), int(v[2])))
+            elif v[0] == 'choice':
+                config[k] = tune.choice([float(_) for _ in v[1:]])
+            else:
+                raise ValueError("Uknown RayTune parameter config")
+        reporter = CLIReporter(
+            # parameter_columns=["l1", "l2", "lr", "batch_size"],
+            metric_columns=["loss", "training_iteration"])
+        hpo_scheduler = ASHAScheduler(
+            metric="loss",
+            mode="min",
+            max_t=args.train.max_epochs,
+            grace_period=1,
+            reduction_factor=2)
+        result = tune.run(
+            partial(train_entry, args=args),
+            resources_per_trial={"cpu": 8, "gpu": gpus_per_trial},
+            config=config,
+            num_samples=args.train.ray_tune_samples,
+            scheduler=hpo_scheduler,
+            progress_reporter=reporter,
+            checkpoint_at_end=True)
+        best_trial = result.get_best_trial("loss", "min", "last")
+        logger.info("Best trial config: {}".format(best_trial.config))
+        logger.info("Best trial final validation loss: {}".format(
+            best_trial.last_result["loss"]))
+    else:
+        train_entry(None, args)
+
+
+def train_entry(config, args: Namespace) -> None:
     accelerator = Accelerator()
     logger.info(accelerator.state)
     if accelerator.is_local_main_process:
@@ -253,6 +300,10 @@ def main(args: Namespace) -> None:
         len(train_loader) / args.train.gradient_accumulation_steps)
     args.train.max_train_steps = max_train_steps = \
         args.train.max_epochs * num_update_steps_per_epoch
+
+    if config is not None:
+        for k, v in config.items():
+            args.train.optimizer_kwargs[k] = v
     optimizer, scheduler = get_optimizer_scheduler(
         optim_method=args.train.optimizer,
         scheduler_method=args.train.scheduler,
