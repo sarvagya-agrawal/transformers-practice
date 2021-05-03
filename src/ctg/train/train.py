@@ -147,6 +147,7 @@ class TrainingAgent:
             self.save_checkpoint(trial=trial,
                                  epoch=self.args.train.max_epochs - 1,
                                  stamp=f'final-{trial}')
+        return {'loss': val_ppl}
 
     def evaluate(self):
         ...
@@ -242,7 +243,8 @@ def main(args: Namespace) -> None:
             num_samples=args.train.ray_tune_samples,
             scheduler=hpo_scheduler,
             progress_reporter=reporter,
-            checkpoint_at_end=True)
+            checkpoint_at_end=True,
+            local_dir=args.logs)
         best_trial = result.get_best_trial("loss", "min", "last")
         logger.info("Best trial config: {}".format(best_trial.config))
         logger.info("Best trial final validation loss: {}".format(
@@ -329,4 +331,4 @@ def train_entry(config, args: Namespace) -> None:
         val_data=(val_loader, val_dataset),
         train_data=(train_loader, train_dataset),
         accelerator=accelerator)
-    agent.train()
+    return agent.train()
