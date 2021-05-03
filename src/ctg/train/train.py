@@ -238,13 +238,13 @@ def main(args: Namespace) -> None:
             reduction_factor=2)
         result = tune.run(
             partial(train_entry, args=args),
-            resources_per_trial={"cpu": 8, "gpu": gpus_per_trial},
+            resources_per_trial={"gpu": gpus_per_trial},
             config=config,
             num_samples=args.train.ray_tune_samples,
             scheduler=hpo_scheduler,
             progress_reporter=reporter,
             checkpoint_at_end=True,
-            local_dir=args.logs)
+            local_dir=str(Path(args.logs).parent))
         best_trial = result.get_best_trial("loss", "min", "last")
         logger.info("Best trial config: {}".format(best_trial.config))
         logger.info("Best trial final validation loss: {}".format(
