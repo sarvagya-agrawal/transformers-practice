@@ -16,8 +16,8 @@ num-trials: 1
 loss: cross_entropy
 clip-grad: 1.0
 optimizer-kwargs:
-  lr: ['loguniform', 0.03, 0.05]
-  weight_decay: ['loguniform', 0.00001, 0.01]
+  lr: ['loguniform', 0.00001, 0.1]
+  weight_decay: ['loguniform', 0.00001, 0.1]
   linear: True
   beta: 0.95
   step_size: 25

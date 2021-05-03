@@ -99,7 +99,6 @@ class TrainingAgent:
                         progress_bar.update(1)
                         steps_completed += 1
                     else:
-                        continue
                         if isinstance(self.optimizer, Adas):
                             self.optimizer.step()
                     if self.args.train.clip_grad > 0:
