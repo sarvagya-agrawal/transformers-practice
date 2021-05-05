@@ -82,8 +82,6 @@ class TrainingAgent:
                 # train_loss, train_ppl = self.epoch_iteration(steps_completed)
                 losses = list()
                 for step, batch in enumerate(self.train_loader):
-                    if step > 2:
-                        break
                     outputs = self.model(**batch)
                     loss = outputs.loss
                     loss = loss / self.args.train.gradient_accumulation_steps
@@ -98,9 +96,6 @@ class TrainingAgent:
                         self.optimizer.zero_grad()
                         progress_bar.update(1)
                         steps_completed += 1
-                    else:
-                        if isinstance(self.optimizer, Adas):
-                            self.optimizer.step()
                     if self.args.train.clip_grad > 0:
                         torch.nn.utils.clip_grad_norm_(
                             self.model.parameters(),
