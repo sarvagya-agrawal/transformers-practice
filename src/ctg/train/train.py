@@ -27,6 +27,7 @@ import torch
 import tqdm
 
 from ..optim import get_optimizer_scheduler
+from ..utils import pretty_print_namespace
 from ..models import get_model_tokenizer
 from ..data.utils import load_data
 from ..utils.logging import logger  # , mp_logger
@@ -249,6 +250,7 @@ def main(args: Namespace) -> None:
 
 def train_entry(config, args: Namespace) -> None:
     accelerator = Accelerator()
+    pretty_print_namespace('main', args)
     logger.info(accelerator.state)
     if accelerator.is_local_main_process:
         datasets.utils.logging.set_verbosity_warning()
