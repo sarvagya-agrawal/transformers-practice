@@ -26,7 +26,7 @@ def pretty_print_dict(_dict, spacing: int = 20, indent: int = 0) -> str:
         elif isinstance(v, Namespace):
             pretty_print_namespace(k, v)
         else:
-            logger.info(f'{indent}{k:{spacing}}| {k:{spacing}}')
+            logger.info(f'{indent}{k:{spacing}}| {v:{spacing}}')
 
 
 def pretty_print_namespace(name: str, args: Namespace) -> None:

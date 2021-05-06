@@ -7,6 +7,7 @@ from collections import defaultdict
 from argparse import Namespace
 from functools import partial
 from pathlib import Path
+from typing import Dict
 
 import math
 import time
@@ -43,7 +44,8 @@ class TrainingAgent:
                  scheduler,
                  val_data,
                  train_data,
-                 accelerator,) -> None:
+                 accelerator,
+                 train_state: Dict[str, int] = None) -> None:
         self.args = args
         self.model = model
         self.tokenier = tokenizer
@@ -53,31 +55,60 @@ class TrainingAgent:
         self.val_loader, self.val_dataset = val_data
         self.train_loader, self.train_dataset = train_data
 
-        print(args.io)
-        self.stats = defaultdict(dict)
+        # self.stats = defaultdict(dict)
         self.output_dir = create_dir(Path(args.io.output))
         self.checkpoint_dir = create_dir(Path(args.io.checkpoint))
         self.cache_dir = create_dir(Path(args.io.cache_dir))
+        self.start_epoch = \
+            train_state['epoch'] if train_state is not None else 0
+        self.start_trial = \
+            train_state['trial'] if train_state is not None else 0
+        self.stats = train_state['stats'] if train_state is not None else \
+            defaultdict(dict)
         logger.info("Training Agent initialized")
 
     def save_stats(self) -> None:
         pd.DataFrame(data=self.stats).to_csv(self.output_dir / 'stats.csv')
 
-    def load_checkpoint(self, path: Path) -> None:
-        return None
-
     def save_checkpoint(self, trial: int, epoch: int, stamp: str) -> None:
-        return None
+        print(logger.info(f"Saving checkpoint {stamp}"))
+        self.accelerator.wait_for_everyone()
+        unwrapped_model = self.accelerator.unwrap_model(self.model)
+        if hasattr(unwrapped_model, 'save_pretrained'):
+            unwrapped_model.save_pretrained(
+                str(self.checkpoint_dir / stamp),
+                save_function=self.accelerator.save)
+        else:
+            torch.save(unwrapped_model.state_dict(),
+                       str(self.checkpoint_dir / stamp))
+        # self.tokenizer.save_pretrained(str(self.checkpoint / stamp))
+        # self.tokenizer.save_vocabulary(str(self.checkpoint / stamp))
+        torch.save({
+            'args': self.args,
+            'epoch': epoch,
+            'trial': trial,
+            'optimizer': self.optimizer.state_dict(),
+            'scheduler': self.scheduler.state_dict(),
+            'stats': self.stats},
+            str(self.checkpoint_dir / stamp / 'train_state.pt'))
 
     def train(self) -> None:
-        progress_bar = tqdm.tqdm(
-            range(self.args.train.max_train_steps),
-            disable=not self.accelerator.is_local_main_process)
         steps_completed = 0
         best_ppl = np.Inf
         last_step = len(self.train_loader) - 1
-        for trial in range(self.args.train.num_trials):
-            for epoch in range(self.args.train.max_epochs):
+        for trial in range(self.start_trial, self.args.train.num_trials):
+            progress_bar = tqdm.tqdm(
+                range(self.args.train.max_train_steps),
+                disable=not self.accelerator.is_local_main_process)
+            if trial != self.start_trial:
+                self.start_epoch = 0
+            # elif self.start_epoch != 0:
+            #     steps = int(self.args.train.max_train_steps /
+            #                 self.args.train.max_epochs) * (self.start_epoch)
+            #     for i in range(steps):
+            #         progress_bar.update(1)
+
+            for epoch in range(self.start_epoch, self.args.train.max_epochs):
                 start_time = time.time()
                 self.model.train()
                 # train_loss, train_ppl = self.epoch_iteration(steps_completed)
@@ -95,8 +126,8 @@ class TrainingAgent:
                         if self.scheduler is not None:
                             self.scheduler.step()
                         self.optimizer.zero_grad()
-                        progress_bar.update(1)
                         steps_completed += 1
+                        progress_bar.update(1)
                     if self.args.train.clip_grad > 0:
                         torch.nn.utils.clip_grad_norm_(
                             self.model.parameters(),
@@ -122,18 +153,19 @@ class TrainingAgent:
                 self.stats[epoch]['val_ppl'] = val_ppl
                 if self.args.train.ray_tune:
                     tune.report(loss=val_ppl)
-            if isinstance(self.optimizer, Adas):
-                self.optimizer.epoch_step(epoch)
-            if (epoch % self.args.io.save_freq == 0 and epoch > 0):
-                self.save_checkpoint(trial=trial,
-                                     epoch=epoch,
-                                     stamp="latest")
-            if np.less(val_ppl, best_ppl):
-                best_ppl = val_ppl
-                self.save_checkpoint(trial=trial,
-                                     epoch=epoch,
-                                     stamp="best")
-            self.save_stats()
+                if isinstance(self.optimizer, Adas):
+                    self.optimizer.epoch_step(epoch)
+                print(epoch % self.args.io.save_freq)
+                if (epoch % self.args.io.save_freq == 0 and epoch > 0):
+                    self.save_checkpoint(trial=trial,
+                                         epoch=epoch,
+                                         stamp="latest")
+                if np.less(val_ppl, best_ppl):
+                    best_ppl = val_ppl
+                    self.save_checkpoint(trial=trial,
+                                         epoch=epoch,
+                                         stamp="best")
+                self.save_stats()
 
             # accelerator.wait_for_everyone()
             # unwrapped_model = accelerator.unwrap_model(model)
@@ -202,7 +234,7 @@ class TrainingAgent:
         if self.args.data.task == 'nmt':
             eval_metric = metric.compute()
             logger.info({"bleu": eval_metric["score"]})
-        logger.info(f"epoch {epoch}: perplexity: {perplexity}")
+        # logger.info(f"epoch {epoch}: perplexity: {perplexity}")
         return perplexity
 
 
@@ -262,6 +294,17 @@ def train_entry(config, args: Namespace) -> None:
     if args.seed is not None:
         set_seed(args.seed)
 
+    train_state = None
+    if args.io.resume is not None:
+        path = Path(args.io.resume)
+        if not path.exists():
+            logger.warning("Unknown resume. Starting from scratch.")
+        else:
+            train_state = torch.load(str(path / 'train_state.pt'))
+            resume = args.io.resume
+            args = train_state['args']
+            args.train.model = resume
+            args.train.model_pretrained = True
     model, tokenizer = get_model_tokenizer(
         model_name=args.train.model,
         model_pretrained=args.train.model_pretrained,
@@ -296,8 +339,8 @@ def train_entry(config, args: Namespace) -> None:
 
     num_update_steps_per_epoch = math.ceil(
         len(train_loader) / args.train.gradient_accumulation_steps)
-    args.train.max_train_steps = max_train_steps = \
-        args.train.max_epochs * num_update_steps_per_epoch
+    args.train.max_train_steps = max_train_steps = int(
+        args.train.max_epochs * num_update_steps_per_epoch)
 
     if config is not None:
         for k, v in config.items():
@@ -312,6 +355,10 @@ def train_entry(config, args: Namespace) -> None:
         optimizer_kwargs=args.train.optimizer_kwargs,
         scheduler_kwargs=args.train.scheduler_kwargs,
     )
+    if train_state is not None:
+        optimizer.load_state_dict(train_state['optimizer'])
+        if scheduler is not None:
+            scheduler.load_state_dict(train_state['scheduler'])
     # Prepare everything with our `accelerator`.
     model, optimizer, train_loader, val_loader = accelerator.prepare(
         model, optimizer, train_loader, val_loader
@@ -326,5 +373,6 @@ def train_entry(config, args: Namespace) -> None:
         scheduler=scheduler,
         val_data=(val_loader, val_dataset),
         train_data=(train_loader, train_dataset),
-        accelerator=accelerator)
+        accelerator=accelerator,
+        train_state=train_state)
     return agent.train()

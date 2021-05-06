@@ -38,7 +38,7 @@ def get_model_tokenizer(
             else AutoModelForSeq2SeqLM.from_config(config)
     else:
         model = AutoModelForCausalLM.from_pretrained(
-            model, config=config) if model_pretrained \
+            model_name, config=config) if model_pretrained \
             else AutoModelForCausalLM.from_config(config)
 
     if task == 'nmt':

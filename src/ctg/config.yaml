@@ -1,10 +1,10 @@
 # Train parameters
-model: None
+model: distilgpt2
 model-pretrained: False
 tokenizer: gpt2
 tokenizer-pretrained: True
 hf-model-config: distilgpt2
-hf-model-config-pretrained: distilgpt2
+hf-model-config-pretrained: g2pt2
 optimizer: AdamW
 scheduler: linear
 batch-size: 1
@@ -16,8 +16,8 @@ num-trials: 1
 loss: cross_entropy
 clip-grad: 1.0
 optimizer-kwargs:
-  lr: ['loguniform', 0.00001, 0.1]
-  weight_decay: ['loguniform', 0.00001, 0.1]
+  lr: 0.00001
+  weight_decay: 0.01
   # linear: True
   # beta: 0.95
   # step_size: 25
@@ -32,9 +32,9 @@ ray-tune-samples: 50
 # Data Parameters
 data-name: wikitext
 data-config: wikitext-2-raw-v1
-train-src: /home/mat/archive/datasets/smcalflow/prepared-context2/train.json
-val-src: /home/mat/archive/datasets/smcalflow/prepared-context2/valid.json
-vocab: /home/mat/archive/datasets/smcalflow/prepared-context2/vocab.txt
+train-src: None
+val-src: None
+vocab: None
 task: clm
 overwrite-cache: False
 num-workers: 4
@@ -45,4 +45,4 @@ max-val-samples: 1000
 checkpoint: /home/mat/archive/playground/_test-checkpoint
 cache-dir: /home/mat/archive/playground/_test-cache
 output: /home/mat/archive/playground/_test-output
-save-freq: 25
+save-freq: 1
