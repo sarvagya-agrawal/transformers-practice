@@ -1,45 +1,45 @@
 # Train parameters
-model: distilgpt2
+model: gpt2
 model-pretrained: False
 tokenizer: gpt2
 tokenizer-pretrained: True
 hf-model-config: distilgpt2
 hf-model-config-pretrained: g2pt2
-optimizer: AdamW
-scheduler: linear
+optimizer: Adas
+scheduler: null
 batch-size: 1
 batch-size-eval: 1
-max-src-length: 512
-max-tgt-length: 512
+max-src-length: 1024
+max-tgt-length: 1024
 max-epochs: 25
 num-trials: 1
 loss: cross_entropy
 clip-grad: 1.0
 optimizer-kwargs:
-  lr: 0.00001
-  weight_decay: 0.01
-  # linear: True
-  # beta: 0.95
-  # step_size: 25
-  # momentum: ['choice', 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+  lr: ['loguniform', 0.00001, 0.1]
+  weight_decay: ['loguniform', 0.00001, 0.1]
+  linear: True
+  beta: 0.98
+  step_size: 25
+  momentum: ['choice', 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 scheduler-kwargs:
   num_warmup_steps: 1500
 mask: False
 pad-to-max-length: True
-ray-tune: False
+ray-tune: True
 ray-tune-samples: 50
 
 # Data Parameters
 data-name: wikitext
 data-config: wikitext-2-raw-v1
-train-src: None
-val-src: None
-vocab: None
+train-src: null
+val-src: null
+vocab: null
 task: clm
 overwrite-cache: False
 num-workers: 4
-max-train-samples: 1000
-max-val-samples: 1000
+max-train-samples: 0.05
+max-val-samples: 0.05
 # tokenizer-files:
 
 checkpoint: /home/mat/archive/playground/_test-checkpoint

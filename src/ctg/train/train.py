@@ -88,7 +88,8 @@ class TrainingAgent:
             'epoch': epoch,
             'trial': trial,
             'optimizer': self.optimizer.state_dict(),
-            'scheduler': self.scheduler.state_dict(),
+            'scheduler': self.scheduler.state_dict() if self.scheduler is
+            not None else None,
             'stats': self.stats},
             str(self.checkpoint_dir / stamp / 'train_state.pt'))
 
@@ -257,6 +258,7 @@ def main(args: Namespace) -> None:
         reporter = CLIReporter(
             # parameter_columns=["l1", "l2", "lr", "batch_size"],
             metric_columns=["loss", "training_iteration"])
+        args.io.save_freq = args.train.max_epochs + 1
         hpo_scheduler = ASHAScheduler(
             metric="loss",
             mode="min",
