@@ -6,6 +6,7 @@
 from typing import List, Union, Dict
 from pathlib import PosixPath, Path
 
+import numpy as np
 import torch
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
@@ -87,8 +88,8 @@ def load_data(train_src: str,
               data_name: str = None,
               data_config: str = None,
               val_split: float = 0.0,
-              max_train_samples: int = -1,
-              max_val_samples: int = -1,
+              max_train_samples: Union[int, float] = -1,
+              max_val_samples: Union[int, float] = -1,
               ignore_pad_for_loss: bool = True,
               pad_to_max_length: bool = True,
               overwrite_cache: bool = False,
@@ -162,10 +163,16 @@ def load_data(train_src: str,
             return tokenizer(examples[text_column_name])
 
     if max_train_samples > 0:
+        if np.less(max_train_samples, 1):
+            max_train_samples = int(
+                max_train_samples * len(raw_datasets['train']))
         raw_datasets['train'] = raw_datasets['train'].select(
             range(min(max_train_samples,
                       len(raw_datasets['train']))))
     if max_val_samples > 0:
+        if np.less(max_val_samples, 1):
+            max_val_samples = int(
+                max_val_samples * len(raw_datasets['validation']))
         raw_datasets['validation'] = raw_datasets['validation'].select(
             range(min(max_val_samples,
                       len(raw_datasets['validation']))))
