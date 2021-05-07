@@ -71,7 +71,7 @@ class TrainingAgent:
         pd.DataFrame(data=self.stats).to_csv(self.output_dir / 'stats.csv')
 
     def save_checkpoint(self, trial: int, epoch: int, stamp: str) -> None:
-        print(logger.info(f"Saving checkpoint {stamp}"))
+        logger.info(f"Saving checkpoint {stamp}")
         self.accelerator.wait_for_everyone()
         unwrapped_model = self.accelerator.unwrap_model(self.model)
         if hasattr(unwrapped_model, 'save_pretrained'):
@@ -154,9 +154,8 @@ class TrainingAgent:
                 self.stats[epoch]['val_ppl'] = val_ppl
                 if self.args.train.ray_tune:
                     tune.report(loss=val_ppl)
-                if isinstance(self.optimizer, Adas):
-                    self.optimizer.epoch_step(epoch)
-                print(epoch % self.args.io.save_freq)
+                if isinstance(self.optimizer.optimizer, Adas):
+                    self.optimizer.optimizer.epoch_step(epoch)
                 if (epoch % self.args.io.save_freq == 0 and epoch > 0):
                     self.save_checkpoint(trial=trial,
                                          epoch=epoch,

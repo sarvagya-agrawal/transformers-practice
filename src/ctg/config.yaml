@@ -16,17 +16,19 @@ num-trials: 1
 loss: cross_entropy
 clip-grad: 1.0
 optimizer-kwargs:
-  lr: ['loguniform', 0.00001, 0.1]
-  weight_decay: ['loguniform', 0.00001, 0.1]
+  # lr: ['loguniform', 0.00001, 0.1]
+  # weight_decay: ['loguniform', 0.00001, 0.1]
+  lr: 0.03
+  weight_decay: 0.001
   linear: True
   beta: 0.98
   step_size: 25
-  momentum: ['choice', 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+  # momentum: ['choice', 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 scheduler-kwargs:
   num_warmup_steps: 1500
 mask: False
 pad-to-max-length: True
-ray-tune: True
+ray-tune: False
 ray-tune-samples: 50
 
 # Data Parameters
