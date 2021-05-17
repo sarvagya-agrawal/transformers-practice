@@ -140,7 +140,9 @@ class TrainingAgent:
                 end_time = time.time()
 
                 losses = torch.cat(losses)
-                losses = losses[: len(self.val_dataset)]
+                losses = losses[: len(self.train_dataset)]
+                print('losses', losses)
+                print('mean', torch.mean(losses))
                 train_ppl = math.exp(torch.mean(losses))
                 rem_time = (end_time - start_time) * \
                     self.args.train.max_epochs - 1 - epoch
@@ -156,6 +158,8 @@ class TrainingAgent:
                     tune.report(loss=val_ppl)
                 if isinstance(self.optimizer.optimizer, Adas):
                     self.optimizer.optimizer.epoch_step(epoch)
+                    print('kg', self.optimizer.optimizer.KG)
+                    print('lr', self.optimizer.optimizer.lr_vector)
                 if (epoch % self.args.io.save_freq == 0 and epoch > 0):
                     self.save_checkpoint(trial=trial,
                                          epoch=epoch,
