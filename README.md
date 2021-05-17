@@ -7,15 +7,7 @@ See `scripts/experiments/*.sh` for various scripts to run various of the experim
 
 @credits to the SMCalFlow and SimpleTOD papers/repos for some of their code, which we based our experiments off of.
 
-For generating the smcalflow dataset, download the jsonl files from [smcaflow](https://microsoft.github.io/task_oriented_dialogue_as_dataflow_synthesis/). Then run 
-```Python
-python -m ctg data prep-smcalflow --data ? \
-  --output ? \
-  --context {2,4,10} \
-  --include-program \
-  --include-described-entities \
-  --subsets train valid
-```
+For generating the smcalflow dataset, download the jsonl files from [smcaflow](https://microsoft.github.io/task_oriented_dialogue_as_dataflow_synthesis/). Then run the relevant scripts from [their repo](https://github.com/microsoft/task_oriented_dialogue_as_dataflow_synthesis).
 
 For generating the MultiWOZ dataset, clone the [SimpleTOD](https://github.com/salesforce/simpletod) repo and run `create_dataset.sh`. They have a simple wrapper around the original MultiWOZ processing that simply converts each turn to a string form. But this won't work for our case. Using the output files `resources/gpt2/{train,val,test}.history_belief`, we have a script to convert and further process the data for our case. See `scripts/experiments/convert_multiwoz.py`. The `v2` version allows for dynamic context generation.
 
